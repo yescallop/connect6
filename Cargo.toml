@@ -1,0 +1,10 @@
+[package]
+name = "connect6"
+version = "0.1.0"
+authors = ["Scallop Ye <yescallop@gmail.com>"]
+edition = "2021"
+
+[dependencies]
+displaydoc = "0.2.3"
+thiserror = "1.0"
+tokio = { version = "1.18.2", features = ["rt", "sync"] }
