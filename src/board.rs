@@ -306,6 +306,7 @@ impl SqrMat {
     }
 }
 
+/// A Connect6 board.
 pub struct Board {
     mat: SqrMat,
     size: u32,
@@ -318,9 +319,9 @@ impl Board {
     ///
     /// # Panics
     ///
-    /// Panics if the size is less than `6`, larger than `255` or is even.
+    /// Panics if the size is zero, larger than `255` or is even.
     pub fn new(size: u32) -> Board {
-        assert!((6..=255).contains(&size) && size % 2 != 0);
+        assert!((1..=255).contains(&size) && size % 2 != 0);
 
         let mat_len = size * size;
         // SAFETY: `size` is checked to be non-zero.
@@ -331,7 +332,7 @@ impl Board {
         unsafe {
             *mat.as_ptr().add((mat_len / 2) as usize) = Slot {
                 stone: OptStone::Black,
-            }
+            };
         }
 
         Board {
@@ -487,10 +488,7 @@ impl fmt::Display for Board {
             return write!(f, "Board(size={})", size);
         }
         for y in (0..size).rev() {
-            if y < 9 {
-                write!(f, " ")?;
-            }
-            write!(f, "{}", y + 1)?;
+            write!(f, "{:>2}", y + 1)?;
             for x in 0..size {
                 let slot = &self[(x, y)];
                 let char = match slot.stone() {

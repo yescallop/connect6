@@ -1,16 +1,19 @@
-#![warn(rust_2018_idioms, unreachable_pub)]
+#![warn(rust_2018_idioms, unreachable_pub, missing_docs)]
 #![deny(unsafe_op_in_unsafe_fn)]
 
-use std::{mem::ManuallyDrop, ptr};
+//! A library for hosting Connect6 games.
 
 use board::{Board, Point, Stone};
 
 use tokio::sync::mpsc::{self, UnboundedReceiver as Receiver, UnboundedSender as Sender};
 
-use CmdError::*;
-
 /// Connect6 boards.
 pub mod board;
+
+/// Module for message passing between tasks.
+pub mod message;
+
+use message::{CmdError::*, *};
 
 macro_rules! ensure {
     ($cond:expr, $err:expr) => {
@@ -18,162 +21,6 @@ macro_rules! ensure {
             return Err($err);
         }
     };
-}
-
-/// The settings of a game.
-#[derive(Debug, Clone, Copy)]
-pub struct Settings {
-    /// The board size.
-    pub board_size: u32,
-}
-
-/// Errors occurred by an invalid command.
-#[derive(thiserror::Error, Debug, Clone, Copy)]
-pub enum CmdError {
-    /// The slot at the point is occupied.
-    #[error("occupied: {0}")]
-    Occupied(Point),
-    /// The point is out of board.
-    #[error("out of board: {0}")]
-    OutOfBoard(Point),
-    /// Ill-timed command.
-    #[error("ill-timed command")]
-    IllTimed,
-}
-
-/// The result of a game.
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub struct GameResult {
-    /// The kind of the result.
-    pub kind: GameResultKind,
-    /// The winning stone, or `None` for a draw.
-    pub winning_stone: Option<Stone>,
-}
-
-/// The reason for the end of a game.
-#[derive(displaydoc::Display, Debug, Copy, Clone, Eq, PartialEq)]
-pub enum GameResultKind {
-    /// A row has been completed.
-    RowCompleted,
-    /// Timeout.
-    Timeout,
-    /// A draw offer has been accepted.
-    DrawOfferAccepted,
-    /// Both players passed.
-    BothPass,
-    /// The board is full.
-    BoardFull,
-    /// Player or server disconnected.
-    Disconnected,
-}
-
-/// A message sent from the game task.
-#[derive(Debug, Clone, Copy)]
-pub enum Msg {
-    /// Game settings.
-    Settings(Settings),
-    /// Game started.
-    GameStart(Stone),
-    /// Move made.
-    Move(Option<(Point, Point)>),
-    /// A draw is offered.
-    DrawOffer,
-    /// Game ended.
-    GameEnd(GameResult),
-    /// Error occurred by the last command.
-    Error(CmdError),
-}
-
-/// A game event.
-#[derive(Debug, Clone)]
-pub struct Event {
-    /// The message sent.
-    pub msg: Msg,
-    /// The stone the message is associated with, or `None` if broadcast.
-    pub stone: Option<Stone>,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum Cmd {
-    /// A move.
-    Move(Option<(Point, Point)>),
-    /// Accepts or offers a draw.
-    ///
-    /// The opponent will only be notified of a draw offer after a following move.
-    AcceptOrOfferDraw,
-    /// Disconnects when the sender is dropped.
-    Disconnect,
-}
-
-/// A command sent from the player task.
-#[derive(Debug, Clone, Copy)]
-pub struct StonedCmd {
-    pub cmd: Cmd,
-    pub stone: Option<Stone>,
-}
-
-/// A command sender.
-///
-/// Drop the sender to disconnect from the game.
-pub struct CmdSender {
-    tx: Sender<StonedCmd>,
-    stone: Option<Stone>,
-}
-
-impl CmdSender {
-    /// Consumes this `CmdSender` and returns the underlying raw sender.
-    pub fn into_raw(self) -> Sender<StonedCmd> {
-        assert!(self.stone.is_none());
-        let me = ManuallyDrop::new(self);
-        unsafe { ptr::read(&me.tx) }
-    }
-
-    /// Splits this anonymous sender into stone-specific (Black, White) senders.
-    pub fn split(self) -> (CmdSender, CmdSender) {
-        assert!(self.stone.is_none());
-        (
-            CmdSender {
-                tx: self.tx.clone(),
-                stone: Some(Stone::Black),
-            },
-            CmdSender {
-                tx: self.into_raw(),
-                stone: Some(Stone::White),
-            },
-        )
-    }
-
-    /// Makes a move.
-    pub fn make_move(&self, mov: (Point, Point)) {
-        self.send(Cmd::Move(Some(mov)));
-    }
-
-    /// Passes.
-    pub fn pass(&self) {
-        self.send(Cmd::Move(None));
-    }
-
-    /// Accepts or offers a draw.
-    ///
-    /// The opponent will only be notified of a draw offer after a following move.
-    pub fn accept_or_offer_draw(&self) {
-        self.send(Cmd::AcceptOrOfferDraw);
-    }
-
-    fn send(&self, raw: Cmd) {
-        let _ = self.tx.send(StonedCmd {
-            cmd: raw,
-            stone: self.stone,
-        });
-    }
-}
-
-impl Drop for CmdSender {
-    fn drop(&mut self) {
-        if self.stone.is_some() {
-            self.send(Cmd::Disconnect);
-        }
-    }
 }
 
 /// Builder for a game.
@@ -269,7 +116,7 @@ impl Control {
         })
     }
 
-    /// Subscribes two split message channels from the game.
+    /// Subscribes two split message channels (Black, White) from the game.
     pub fn subscribe_split(&mut self) -> (Receiver<Msg>, Receiver<Msg>) {
         let first = mpsc::unbounded_channel();
         let second = mpsc::unbounded_channel();
@@ -413,11 +260,11 @@ impl Control {
                 Ok(Action::Next)
             }
             Cmd::AcceptOrOfferDraw => {
-                ensure!(self.cur_stone == stone, IllTimed);
                 if self.last_draw_offer == Some(stone.opposite()) {
                     self.end_draw(GameResultKind::DrawOfferAccepted);
                     Ok(Action::Next)
                 } else {
+                    ensure!(self.cur_stone == stone, IllTimed);
                     self.last_draw_offer = Some(stone);
                     Ok(Action::Wait)
                 }
@@ -429,6 +276,3 @@ impl Control {
         }
     }
 }
-
-/// Records a game.
-pub struct Record {}

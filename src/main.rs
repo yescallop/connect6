@@ -1,6 +1,10 @@
 use std::thread;
 
-use connect6::{board::Board, Builder, Event, Handle, Msg};
+use connect6::{
+    board::Board,
+    message::{Event, Msg},
+    Builder, Handle,
+};
 
 use tokio::runtime::Builder as RtBuilder;
 
@@ -34,9 +38,9 @@ fn main() {
         unreachable!();
     };
 
-    println!("----- GAME SETTINGS -----");
+    println!("{:-^30}", " GAME SETTINGS ");
     println!("Board size: {}", board.size());
-    println!("----- GAME STARTED -----");
+    println!("{:-^30}", " GAME STARTED ");
     println!("{}", board);
 
     while let Some(event) = event_rx.blocking_recv() {
@@ -47,13 +51,15 @@ fn main() {
                     board.make_move(mov, stone);
                     println!("{} moved: ({}, {})", stone, mov.0, mov.1);
                     println!("{}", board);
+                } else {
+                    println!("{} passed.", stone);
                 }
             }
             Msg::DrawOffer => {
                 println!("{} offered a draw.", event.stone.unwrap());
             }
             Msg::GameEnd(res) => {
-                println!("----- GAME ENDED -----");
+                println!("{:-^30}", " GAME ENDED ");
                 if let Some(stone) = res.winning_stone {
                     println!("The winner: {}", stone);
                 } else {
