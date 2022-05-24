@@ -10,10 +10,15 @@ use tokio::sync::mpsc::{self, UnboundedReceiver as Receiver, UnboundedSender as 
 /// Connect6 boards.
 pub mod board;
 
-/// Module for message passing between tasks.
+/// Message types that may be passed between tasks.
 pub mod message;
 
-use message::{CmdError::*, *};
+use message::{CommandError::*, *};
+
+/// Channel types for message passing between tasks.
+pub mod channel;
+
+use channel::*;
 
 macro_rules! ensure {
     ($cond:expr, $err:expr) => {
@@ -49,7 +54,7 @@ impl Builder {
         let (cmd_tx, cmd_rx) = mpsc::unbounded_channel();
         Handle {
             event_rx,
-            cmd_tx: CmdSender {
+            cmd_tx: CommandSender {
                 tx: cmd_tx,
                 stone: None,
             },
@@ -67,10 +72,10 @@ impl Default for Builder {
 
 /// A game handle.
 pub struct Handle {
-    /// The event receiver.
-    pub event_rx: Receiver<Event>,
+    /// The global event receiver.
+    pub event_rx: Receiver<FullEvent>,
     /// The command sender.
-    pub cmd_tx: CmdSender,
+    pub cmd_tx: CommandSender,
     /// The game control.
     pub ctrl: Box<Control>,
 }
@@ -82,12 +87,12 @@ enum Action {
 
 /// A game control.
 pub struct Control {
-    /// The event sender.
-    event_tx: Sender<Event>,
-    /// The message senders.
-    msg_txs: Option<[Sender<Msg>; 2]>,
+    /// The global event sender.
+    event_tx: Sender<FullEvent>,
+    /// The notification event senders.
+    notification_txs: Option<[Sender<Event>; 2]>,
     /// The command receiver.
-    cmd_rx: Receiver<StonedCmd>,
+    cmd_rx: Receiver<FullCommand>,
 
     /// The board.
     board: Board,
@@ -103,10 +108,14 @@ pub struct Control {
 }
 
 impl Control {
-    fn new(builder: &Builder, event_tx: Sender<Event>, cmd_rx: Receiver<StonedCmd>) -> Box<Self> {
+    fn new(
+        builder: &Builder,
+        event_tx: Sender<FullEvent>,
+        cmd_rx: Receiver<FullCommand>,
+    ) -> Box<Self> {
         Box::new(Self {
             event_tx,
-            msg_txs: None,
+            notification_txs: None,
             cmd_rx,
             board: Board::new(builder.board_size),
             cur_stone: Stone::White,
@@ -116,32 +125,32 @@ impl Control {
         })
     }
 
-    /// Subscribes two split message channels (Black, White) from the game.
-    pub fn subscribe_split(&mut self) -> (Receiver<Msg>, Receiver<Msg>) {
+    /// Subscribes two notification event receivers (Black, White) from the game.
+    pub fn subscribe(&mut self) -> (Receiver<Event>, Receiver<Event>) {
         let first = mpsc::unbounded_channel();
         let second = mpsc::unbounded_channel();
-        self.msg_txs = Some([first.0, second.0]);
+        self.notification_txs = Some([first.0, second.0]);
         (first.1, second.1)
     }
 
-    /// Sends a message to one stone.
-    fn msg(&self, stone: Stone, msg: Msg) {
-        if let Some(txs) = &self.msg_txs {
-            let _ = txs[stone as usize - 1].send(msg);
+    /// Notifies one stone of the event.
+    fn notify(&self, stone: Stone, event: Event) {
+        if let Some(txs) = &self.notification_txs {
+            let _ = txs[stone as usize - 1].send(event);
         }
     }
 
-    /// Sends a message to both stones.
-    fn msg_all(&self, msg: Msg) {
-        if let Some(txs) = &self.msg_txs {
-            let _ = txs[0].send(msg);
-            let _ = txs[1].send(msg);
+    /// Notifies both stones of the event.
+    fn notify_both(&self, event: Event) {
+        if let Some(txs) = &self.notification_txs {
+            let _ = txs[0].send(event);
+            let _ = txs[1].send(event);
         }
     }
 
-    /// Sends an event.
-    fn event(&self, stone: Option<Stone>, msg: Msg) {
-        let _ = self.event_tx.send(Event { msg, stone });
+    /// Sends a global event.
+    fn event(&self, stone: Option<Stone>, event: Event) {
+        let _ = self.event_tx.send(FullEvent { event, stone });
     }
 
     /// Switches the turn.
@@ -149,48 +158,43 @@ impl Control {
         self.cur_stone = self.cur_stone.opposite();
     }
 
-    /// Makes a move on the board if it is not a pass,
-    /// switches the turn and broadcasts it.
+    /// Makes a move on the board if it is not a pass, switches the turn and broadcasts it.
     fn make_move(&mut self, stone: Stone, mov: Option<(Point, Point)>) {
         if let Some(mov) = mov {
             self.board.make_move(mov, stone);
         }
         self.switch();
-        self.event(Some(stone), Msg::Move(mov));
-        self.msg_all(Msg::Move(mov));
+        self.event(Some(stone), Event::Move(mov));
+        self.notify_both(Event::Move(mov));
     }
 
     /// Ends the game with the given result.
     fn end(&mut self, kind: GameResultKind, winning_stone: Stone) {
-        if self.result.is_none() {
-            self.result = Some(GameResult {
-                kind,
-                winning_stone: Some(winning_stone),
-            });
-        }
+        self.result = Some(GameResult {
+            kind,
+            winning_stone: Some(winning_stone),
+        });
     }
 
     /// Ends the game in a draw with the given result.
     fn end_draw(&mut self, kind: GameResultKind) {
-        if self.result.is_none() {
-            self.result = Some(GameResult {
-                kind,
-                winning_stone: None,
-            });
-        }
+        self.result = Some(GameResult {
+            kind,
+            winning_stone: None,
+        });
     }
 
     /// Starts the game.
-    pub async fn start(mut self: Box<Self>) -> GameResult {
+    pub async fn start(mut self: Box<Self>) {
         // Broadcast the game settings.
         let settings = Settings {
             board_size: self.board.size(),
         };
-        self.event(None, Msg::Settings(settings));
-        self.msg_all(Msg::Settings(settings));
+        self.event(None, Event::Settings(settings));
+        self.notify_both(Event::Settings(settings));
 
-        self.msg(Stone::Black, Msg::GameStart(Stone::Black));
-        self.msg(Stone::White, Msg::GameStart(Stone::White));
+        self.notify(Stone::Black, Event::GameStart(Stone::Black));
+        self.notify(Stone::White, Event::GameStart(Stone::White));
 
         // Loop until the game is ended.
         'outer: while self.result.is_none() {
@@ -200,14 +204,17 @@ impl Control {
                 break;
             }
 
+            self.event(Some(self.cur_stone), Event::MoveRequest);
+            self.notify(self.cur_stone, Event::MoveRequest);
+
             // TODO: Calculate timeout.
-            while let Some(StonedCmd { cmd, stone }) = self.cmd_rx.recv().await {
+            while let Some(FullCommand { cmd, stone }) = self.cmd_rx.recv().await {
                 // If sent anonymously, a command should belong to the current stone.
                 let stone = stone.unwrap_or(self.cur_stone);
                 match self.process_cmd(stone, cmd) {
                     Err(e) => {
-                        self.event(Some(stone), Msg::Error(e));
-                        self.msg(stone, Msg::Error(e));
+                        self.event(Some(stone), Event::Error(e));
+                        self.notify(stone, Event::Error(e));
                     }
                     Ok(Action::Next) => continue 'outer,
                     Ok(Action::Wait) => (),
@@ -218,19 +225,18 @@ impl Control {
 
         // Broadcast the result and goodbye.
         let result = self.result.unwrap();
-        self.event(None, Msg::GameEnd(result));
-        self.msg_all(Msg::GameEnd(result));
-        result
+        self.event(None, Event::GameEnd(result));
+        self.notify_both(Event::GameEnd(result));
     }
 
-    fn process_cmd(&mut self, stone: Stone, cmd: Cmd) -> Result<Action, CmdError> {
+    fn process_cmd(&mut self, stone: Stone, cmd: Command) -> Result<Action, CommandError> {
         match cmd {
-            Cmd::Move(mov) => {
+            Command::Move(mov) => {
                 ensure!(self.cur_stone == stone, IllTimed);
 
                 if self.last_draw_offer == Some(stone) {
-                    self.event(Some(stone), Msg::DrawOffer);
-                    self.msg(stone.opposite(), Msg::DrawOffer);
+                    self.event(Some(stone), Event::DrawOffer);
+                    self.notify(stone.opposite(), Event::DrawOffer);
                 } else {
                     self.last_draw_offer = None;
                 }
@@ -259,7 +265,7 @@ impl Control {
                 }
                 Ok(Action::Next)
             }
-            Cmd::AcceptOrOfferDraw => {
+            Command::AcceptOrOfferDraw => {
                 if self.last_draw_offer == Some(stone.opposite()) {
                     self.end_draw(GameResultKind::DrawOfferAccepted);
                     Ok(Action::Next)
@@ -269,7 +275,7 @@ impl Control {
                     Ok(Action::Wait)
                 }
             }
-            Cmd::Disconnect => {
+            Command::Disconnect => {
                 self.end(GameResultKind::Disconnected, stone.opposite());
                 Ok(Action::Next)
             }

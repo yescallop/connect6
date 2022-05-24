@@ -1,39 +1,32 @@
-use std::thread;
+use std::io::{self, Write};
 
 use connect6::{
-    board::Board,
-    message::{Event, Msg},
+    board::{Board, Point, Stone},
+    channel::{CommandSender, Receiver},
+    message::{Event, FullEvent},
     Builder, Handle,
 };
 
-use tokio::runtime::Builder as RtBuilder;
+use tokio::task;
 
-fn main() {
+#[tokio::main(flavor = "current_thread")]
+async fn main() {
     let Handle {
-        mut event_rx,
+        event_rx,
         cmd_tx,
         ctrl,
     } = Builder::new().build();
 
-    thread::spawn(|| {
-        RtBuilder::new_current_thread()
-            .enable_all()
-            .build()
-            .unwrap()
-            .block_on(ctrl.start());
-    });
+    tokio::join!(ctrl.start(), attach(event_rx, Some(cmd_tx)));
+}
 
-    for i in 0..6 {
-        cmd_tx.make_move(((i * 2, 0).into(), (i * 2 + 1, 0).into()));
-        cmd_tx.make_move(((i * 2, 1).into(), (i * 2 + 1, 1).into()));
-    }
-
-    let mut board = if let Some(Event {
-        msg: Msg::Settings(s),
+async fn attach(mut event_rx: Receiver<FullEvent>, cmd_tx: Option<CommandSender>) {
+    let mut board = if let Some(FullEvent {
+        event: Event::Settings(settings),
         ..
-    }) = event_rx.blocking_recv()
+    }) = event_rx.recv().await
     {
-        Board::new(s.board_size)
+        Board::new(settings.board_size)
     } else {
         unreachable!();
     };
@@ -41,24 +34,34 @@ fn main() {
     println!("{:-^30}", " GAME SETTINGS ");
     println!("Board size: {}", board.size());
     println!("{:-^30}", " GAME STARTED ");
-    println!("{}", board);
 
-    while let Some(event) = event_rx.blocking_recv() {
-        match event.msg {
-            Msg::Move(mov) => {
-                let stone = event.stone.unwrap();
+    while let Some(FullEvent { event, stone }) = event_rx.recv().await {
+        match event {
+            Event::MoveRequest => {
+                let stone = stone.unwrap();
+                if let Some(cmd_tx) = &cmd_tx {
+                    println!("{}", board);
+                    cmd_tx.make_move(
+                        task::spawn_blocking(move || read_input(stone))
+                            .await
+                            .unwrap(),
+                    );
+                }
+            }
+            Event::Move(mov) => {
+                let stone = stone.unwrap();
                 if let Some(mov) = mov {
                     board.make_move(mov, stone);
                     println!("{} moved: ({}, {})", stone, mov.0, mov.1);
-                    println!("{}", board);
                 } else {
                     println!("{} passed.", stone);
                 }
             }
-            Msg::DrawOffer => {
-                println!("{} offered a draw.", event.stone.unwrap());
+            Event::DrawOffer => {
+                println!("{} offered a draw.", stone.unwrap());
             }
-            Msg::GameEnd(res) => {
+            Event::GameEnd(res) => {
+                println!("{}", board);
                 println!("{:-^30}", " GAME ENDED ");
                 if let Some(stone) = res.winning_stone {
                     println!("The winner: {}", stone);
@@ -67,10 +70,37 @@ fn main() {
                 }
                 println!("Reason: {}", res.kind);
             }
-            Msg::Error(err) => {
-                println!("{} occurred an error: {}", event.stone.unwrap(), err);
+            Event::Error(err) => {
+                let stone = stone.unwrap();
+                println!("{} occurred an error: {}", stone, err);
+                if let Some(cmd_tx) = &cmd_tx {
+                    cmd_tx.make_move(
+                        task::spawn_blocking(move || read_input(stone))
+                            .await
+                            .unwrap(),
+                    );
+                }
             }
             _ => (),
         }
+    }
+}
+
+pub fn read_input(stone: Stone) -> Option<(Point, Point)> {
+    let mut buf = String::new();
+    loop {
+        print!("[{}] Please move: ", stone);
+        io::stdout().flush().unwrap();
+        io::stdin().read_line(&mut buf).unwrap();
+        if buf == "!" {
+            return None;
+        }
+        if let Some((p1, p2)) = buf.split_once(',') {
+            if let (Ok(p1), Ok(p2)) = (p1.trim().parse(), p2.trim().parse()) {
+                return Some((p1, p2));
+            }
+        }
+        eprintln!("[Error] Input mismatch");
+        buf.clear();
     }
 }
