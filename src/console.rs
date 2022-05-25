@@ -8,7 +8,7 @@ use std::io::{self, Write};
 
 use tokio::task;
 
-/// Logs the game events to the console.
+/// Logs the game events in the console.
 pub async fn log(mut event_rx: Receiver<FullEvent>) {
     let mut board = if let Some(FullEvent {
         event: Event::Settings(settings),
