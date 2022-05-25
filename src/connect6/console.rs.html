@@ -98,7 +98,7 @@
 
 <span class="kw">use</span> <span class="ident">tokio::task</span>;
 
-<span class="doccomment">/// Logs the game events to the console.</span>
+<span class="doccomment">/// Logs the game events in the console.</span>
 <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">log</span>(<span class="kw-2">mut</span> <span class="ident">event_rx</span>: <span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">FullEvent</span><span class="op">&gt;</span>) {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">board</span> <span class="op">=</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">FullEvent</span> {
         <span class="ident">event</span>: <span class="ident">Event::Settings</span>(<span class="ident">settings</span>),

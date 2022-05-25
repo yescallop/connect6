@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["log","Logs the game events to the console."],["read_move","Reads a move from the console."]]});
+initSidebarItems({"fn":[["log","Logs the game events in the console."],["read_move","Reads a move from the console."]]});
