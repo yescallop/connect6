@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["CmdSender","A command sender."]]});
