@@ -8,7 +8,7 @@ A library for hosting [Connect6] games asynchronously.
 
 ## Examples
 
-Play a game interactively in the console ([examples/console.rs]([/examples/console.rs])):
+Play a game interactively in the console ([examples/console.rs](/examples/console.rs)):
 
 ```rust
 use connect6::{player::Console, Builder};
