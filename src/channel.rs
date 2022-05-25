@@ -5,26 +5,34 @@ use std::{mem::ManuallyDrop, ptr};
 
 use crate::{
     board::{Point, Stone},
-    message::{Command, FullCommand},
+    message::{Cmd, FullCmd},
 };
 
 /// A command sender.
 ///
 /// Drop the sender to disconnect from the game.
-pub struct CommandSender {
-    pub(crate) tx: Sender<FullCommand>,
-    pub(crate) stone: Option<Stone>,
+pub struct CmdSender {
+    pub(super) tx: Sender<FullCmd>,
+    pub(super) stone: Option<Stone>,
 }
 
-impl CommandSender {
+impl CmdSender {
     /// Consumes this `CmdSender` and returns the underlying full command sender.
-    pub fn into_full(self) -> Sender<FullCommand> {
+    ///
+    /// # Panics
+    ///
+    /// Panics if this sender is not anonymous.
+    pub fn into_full(self) -> Sender<FullCmd> {
         assert!(self.stone.is_none());
         let me = ManuallyDrop::new(self);
         unsafe { ptr::read(&me.tx) }
     }
 
     /// Splits this anonymous sender into stone-specific (Black, White) senders.
+    ///
+    /// # Panics
+    ///
+    /// Panics if this sender is not anonymous.
     pub fn split(self) -> (Self, Self) {
         assert!(self.stone.is_none());
         (
@@ -39,30 +47,36 @@ impl CommandSender {
         )
     }
 
+    /// Returns the stone of this sender, or `None` if this sender is anonymous.
+    #[inline]
+    pub fn stone(&self) -> Option<Stone> {
+        self.stone
+    }
+
     /// Makes a move.
     pub fn make_move(&self, mov: Option<(Point, Point)>) {
-        self.send(Command::Move(mov));
+        self.send(Cmd::Move(mov));
     }
 
     /// Accepts or offers a draw.
     ///
     /// The opponent will only be notified of a draw offer after a following move.
     pub fn accept_or_offer_draw(&self) {
-        self.send(Command::AcceptOrOfferDraw);
+        self.send(Cmd::AcceptOrOfferDraw);
     }
 
-    fn send(&self, cmd: Command) {
-        let _ = self.tx.send(FullCommand {
+    fn send(&self, cmd: Cmd) {
+        let _ = self.tx.send(FullCmd {
             cmd,
             stone: self.stone,
         });
     }
 }
 
-impl Drop for CommandSender {
+impl Drop for CmdSender {
     fn drop(&mut self) {
         if self.stone.is_some() {
-            self.send(Command::Disconnect);
+            self.send(Cmd::Disconnect);
         }
     }
 }

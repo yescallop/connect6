@@ -38,32 +38,30 @@ pub enum GameResultKind {
 pub enum Event {
     /// Game settings.
     Settings(Settings),
-    /// Game started.
-    GameStart(Stone),
-    /// Move requested.
-    MoveRequest,
+    /// Your turn.
+    Turn,
     /// Move made.
     Move(Option<(Point, Point)>),
     /// A draw is offered.
     DrawOffer,
+    /// Error occurred by the last command.
+    Error(CmdError),
     /// Game ended.
     GameEnd(GameResult),
-    /// Error occurred by the last command.
-    Error(CommandError),
 }
 
 /// A full event sent from the game task.
 #[derive(Debug, Clone)]
 pub struct FullEvent {
-    /// The message sent.
+    /// The event.
     pub event: Event,
-    /// The stone the message is associated with, or `None` if broadcast.
+    /// The stone the event is associated with.
     pub stone: Option<Stone>,
 }
 
 /// Errors occurred by an invalid command.
 #[derive(thiserror::Error, Debug, Clone, Copy)]
-pub enum CommandError {
+pub enum CmdError {
     /// The slot at the point is occupied.
     #[error("occupied: {0}")]
     Occupied(Point),
@@ -77,7 +75,7 @@ pub enum CommandError {
 
 /// A command sent from the player task.
 #[derive(Debug, Clone, Copy)]
-pub enum Command {
+pub enum Cmd {
     /// A move.
     Move(Option<(Point, Point)>),
     /// Accepts or offers a draw.
@@ -90,9 +88,9 @@ pub enum Command {
 
 /// A full command sent from the player task.
 #[derive(Debug, Clone, Copy)]
-pub struct FullCommand {
+pub struct FullCmd {
     /// The command.
-    pub cmd: Command,
+    pub cmd: Cmd,
     /// The stone that sent the command, or `None` if sent anonymously.
     pub stone: Option<Stone>,
 }

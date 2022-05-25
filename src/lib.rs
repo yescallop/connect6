@@ -1,24 +1,34 @@
 #![warn(rust_2018_idioms, unreachable_pub, missing_docs)]
 #![deny(unsafe_op_in_unsafe_fn)]
 
-//! A library for hosting Connect6 games.
+//! A library for hosting [Connect6] games asynchronously.
+//!
+//! [Connect6]: https://en.wikipedia.org/wiki/Connect6
 
-use board::{Board, Point, Stone};
-
-use tokio::sync::mpsc::{self, UnboundedReceiver as Receiver, UnboundedSender as Sender};
+use tokio::sync::mpsc;
 
 /// Connect6 boards.
 pub mod board;
 
+use board::{Board, Point, Stone};
+
 /// Message types that may be passed between tasks.
 pub mod message;
 
-use message::{CommandError::*, *};
+use message::{CmdError::*, *};
 
 /// Channel types for message passing between tasks.
 pub mod channel;
 
 use channel::*;
+
+/// Module for console logging and input.
+pub mod console;
+
+/// Player trait and implementations.
+pub mod player;
+
+use player::Player;
 
 macro_rules! ensure {
     ($cond:expr, $err:expr) => {
@@ -54,7 +64,7 @@ impl Builder {
         let (cmd_tx, cmd_rx) = mpsc::unbounded_channel();
         Handle {
             event_rx,
-            cmd_tx: CommandSender {
+            cmd_tx: CmdSender {
                 tx: cmd_tx,
                 stone: None,
             },
@@ -75,9 +85,33 @@ pub struct Handle {
     /// The global event receiver.
     pub event_rx: Receiver<FullEvent>,
     /// The command sender.
-    pub cmd_tx: CommandSender,
+    pub cmd_tx: CmdSender,
     /// The game control.
     pub ctrl: Box<Control>,
+}
+
+impl Handle {
+    /// Starts a game with the given players, logging the events to the console if needed.
+    pub async fn start(mut self, log: bool, black: impl Player, white: impl Player) -> GameResult {
+        let (black_rx, white_rx) = self.ctrl.subscribe();
+        let (black_tx, white_tx) = self.cmd_tx.split();
+        if log {
+            tokio::join!(
+                self.ctrl.start(),
+                console::log(self.event_rx),
+                black.attach(black_rx, black_tx),
+                white.attach(white_rx, white_tx),
+            )
+            .0
+        } else {
+            tokio::join!(
+                self.ctrl.start(),
+                black.attach(black_rx, black_tx),
+                white.attach(white_rx, white_tx),
+            )
+            .0
+        }
+    }
 }
 
 enum Action {
@@ -92,7 +126,7 @@ pub struct Control {
     /// The notification event senders.
     notification_txs: Option<[Sender<Event>; 2]>,
     /// The command receiver.
-    cmd_rx: Receiver<FullCommand>,
+    cmd_rx: Receiver<FullCmd>,
 
     /// The board.
     board: Board,
@@ -108,11 +142,7 @@ pub struct Control {
 }
 
 impl Control {
-    fn new(
-        builder: &Builder,
-        event_tx: Sender<FullEvent>,
-        cmd_rx: Receiver<FullCommand>,
-    ) -> Box<Self> {
+    fn new(builder: &Builder, event_tx: Sender<FullEvent>, cmd_rx: Receiver<FullCmd>) -> Box<Self> {
         Box::new(Self {
             event_tx,
             notification_txs: None,
@@ -184,17 +214,14 @@ impl Control {
         });
     }
 
-    /// Starts the game.
-    pub async fn start(mut self: Box<Self>) {
+    /// Starts the game and returns the result when the game is ended.
+    pub async fn start(mut self: Box<Self>) -> GameResult {
         // Broadcast the game settings.
         let settings = Settings {
             board_size: self.board.size(),
         };
         self.event(None, Event::Settings(settings));
         self.notify_both(Event::Settings(settings));
-
-        self.notify(Stone::Black, Event::GameStart(Stone::Black));
-        self.notify(Stone::White, Event::GameStart(Stone::White));
 
         // Loop until the game is ended.
         'outer: while self.result.is_none() {
@@ -204,11 +231,11 @@ impl Control {
                 break;
             }
 
-            self.event(Some(self.cur_stone), Event::MoveRequest);
-            self.notify(self.cur_stone, Event::MoveRequest);
+            self.event(Some(self.cur_stone), Event::Turn);
+            self.notify(self.cur_stone, Event::Turn);
 
             // TODO: Calculate timeout.
-            while let Some(FullCommand { cmd, stone }) = self.cmd_rx.recv().await {
+            while let Some(FullCmd { cmd, stone }) = self.cmd_rx.recv().await {
                 // If sent anonymously, a command should belong to the current stone.
                 let stone = stone.unwrap_or(self.cur_stone);
                 match self.process_cmd(stone, cmd) {
@@ -227,11 +254,12 @@ impl Control {
         let result = self.result.unwrap();
         self.event(None, Event::GameEnd(result));
         self.notify_both(Event::GameEnd(result));
+        result
     }
 
-    fn process_cmd(&mut self, stone: Stone, cmd: Command) -> Result<Action, CommandError> {
+    fn process_cmd(&mut self, stone: Stone, cmd: Cmd) -> Result<Action, CmdError> {
         match cmd {
-            Command::Move(mov) => {
+            Cmd::Move(mov) => {
                 ensure!(self.cur_stone == stone, IllTimed);
 
                 if self.last_draw_offer == Some(stone) {
@@ -250,8 +278,7 @@ impl Control {
 
                     self.make_move(stone, Some(mov));
 
-                    if self.board.test_six_at(mov.0, stone) || self.board.test_six_at(mov.1, stone)
-                    {
+                    if self.board.is_win_at(mov.0, stone) || self.board.is_win_at(mov.1, stone) {
                         self.end(GameResultKind::RowCompleted, stone);
                     }
                     self.last_pass = false;
@@ -265,7 +292,7 @@ impl Control {
                 }
                 Ok(Action::Next)
             }
-            Command::AcceptOrOfferDraw => {
+            Cmd::AcceptOrOfferDraw => {
                 if self.last_draw_offer == Some(stone.opposite()) {
                     self.end_draw(GameResultKind::DrawOfferAccepted);
                     Ok(Action::Next)
@@ -275,7 +302,7 @@ impl Control {
                     Ok(Action::Wait)
                 }
             }
-            Command::Disconnect => {
+            Cmd::Disconnect => {
                 self.end(GameResultKind::Disconnected, stone.opposite());
                 Ok(Action::Next)
             }

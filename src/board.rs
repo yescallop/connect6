@@ -68,7 +68,7 @@ impl Axis {
 /// This is required to avoid integer boundary checks.
 ///
 /// A `Point` must be checked to be inside the board before use.
-#[derive(Eq, PartialEq, Copy, Clone)]
+#[derive(Eq, PartialEq, Copy, Clone, Hash)]
 pub struct Point {
     /// The horizontal coordinate.
     pub x: u32,
@@ -159,7 +159,7 @@ impl FromStr for Point {
     /// # Examples
     ///
     /// ```
-    /// use scamoku::board::Point;
+    /// use connect6::board::Point;
     /// assert_eq!("A1".parse(), Ok(Point::new(0, 0)));
     /// assert_eq!("h7".parse(), Ok(Point::new(7, 6)));
     /// assert_eq!("xFD11".parse(), Ok(Point::new(16383, 10)));
@@ -261,6 +261,12 @@ impl Slot {
     pub fn stone(&self) -> Option<Stone> {
         self.stone.into()
     }
+
+    /// Sets the stone in the slot.
+    #[inline]
+    pub fn set_stone(&mut self, stone: Option<Stone>) {
+        self.stone = stone.into();
+    }
 }
 
 /// A square matrix.
@@ -330,9 +336,8 @@ impl Board {
         // Make the center move.
         // SAFETY: The index is within bounds.
         unsafe {
-            *mat.as_ptr().add((mat_len / 2) as usize) = Slot {
-                stone: OptStone::Black,
-            };
+            let slot = &mut *mat.as_ptr().add((mat_len / 2) as usize);
+            slot.set_stone(Some(Stone::Black));
         }
 
         Board {
@@ -401,23 +406,23 @@ impl Board {
     pub fn make_move(&mut self, mov: (Point, Point), stone: Stone) {
         let slot = &mut self[mov.0];
         assert!(slot.is_empty(), "moving into an occupied slot");
-        slot.stone = Some(stone).into();
+        slot.set_stone(Some(stone));
 
         let slot = &mut self[mov.1];
         assert!(slot.is_empty(), "moving into an occupied slot");
-        slot.stone = Some(stone).into();
+        slot.set_stone(Some(stone));
 
         self.move_index += 2;
     }
 
-    /// Returns `true` if there is an exact six at the point on the board.
-    pub fn test_six_at(&self, p: Point, stone: Stone) -> bool {
-        self.row_len_any(p, stone, |l| l == 6)
+    /// Returns `true` if there is a six or overline of the given stone through the point.
+    ///
+    /// This method assumes that the slot at the point is occupied by the given stone.
+    pub fn is_win_at(&self, p: Point, stone: Stone) -> bool {
+        self.row_len_any(p, stone, |l| l >= 6)
     }
 
     /// Calculates the length of the row through a point on the given axis.
-    ///
-    /// This method assumes that the slot at the point is occupied.
     fn row_len(&self, p: Point, stone: Stone, axis: Axis) -> u32 {
         let count = |mut p: Point, forward| {
             let mut len = 0;
