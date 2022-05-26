@@ -316,6 +316,9 @@
 <span id="309">309</span>
 <span id="310">310</span>
 <span id="311">311</span>
+<span id="312">312</span>
+<span id="313">313</span>
+<span id="314">314</span>
 </pre><pre class="rust"><code><span class="attribute">#![<span class="ident">warn</span>(<span class="ident">rust_2018_idioms</span>, <span class="ident">unreachable_pub</span>, <span class="ident">missing_docs</span>)]</span>
 <span class="attribute">#![<span class="ident">deny</span>(<span class="ident">unsafe_op_in_unsafe_fn</span>)]</span>
 
@@ -409,26 +412,29 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Handle</span> {
-    <span class="doccomment">/// Starts a game with the given players, logging the events to the console if needed.</span>
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">start</span>(<span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">log</span>: <span class="ident">bool</span>, <span class="ident">black</span>: <span class="kw">impl</span> <span class="ident">Player</span>, <span class="ident">white</span>: <span class="kw">impl</span> <span class="ident">Player</span>) -&gt; <span class="ident">GameResult</span> {
+    <span class="doccomment">/// Starts a game with the given players, logging the events to the console.</span>
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">start</span>(<span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">black</span>: <span class="kw">impl</span> <span class="ident">Player</span>, <span class="ident">white</span>: <span class="kw">impl</span> <span class="ident">Player</span>) -&gt; <span class="ident">GameResult</span> {
         <span class="kw">let</span> (<span class="ident">black_rx</span>, <span class="ident">white_rx</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">ctrl</span>.<span class="ident">subscribe</span>();
         <span class="kw">let</span> (<span class="ident">black_tx</span>, <span class="ident">white_tx</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">cmd_tx</span>.<span class="ident">split</span>();
-        <span class="kw">if</span> <span class="ident">log</span> {
-            <span class="macro">tokio::join!</span>(
-                <span class="self">self</span>.<span class="ident">ctrl</span>.<span class="ident">start</span>(),
-                <span class="ident">console::log</span>(<span class="self">self</span>.<span class="ident">event_rx</span>),
-                <span class="ident">black</span>.<span class="ident">attach</span>(<span class="ident">black_rx</span>, <span class="ident">black_tx</span>),
-                <span class="ident">white</span>.<span class="ident">attach</span>(<span class="ident">white_rx</span>, <span class="ident">white_tx</span>),
-            )
-            .<span class="number">0</span>
-        } <span class="kw">else</span> {
-            <span class="macro">tokio::join!</span>(
-                <span class="self">self</span>.<span class="ident">ctrl</span>.<span class="ident">start</span>(),
-                <span class="ident">black</span>.<span class="ident">attach</span>(<span class="ident">black_rx</span>, <span class="ident">black_tx</span>),
-                <span class="ident">white</span>.<span class="ident">attach</span>(<span class="ident">white_rx</span>, <span class="ident">white_tx</span>),
-            )
-            .<span class="number">0</span>
-        }
+        <span class="macro">tokio::join!</span>(
+            <span class="self">self</span>.<span class="ident">ctrl</span>.<span class="ident">start</span>(),
+            <span class="ident">console::log</span>(<span class="self">self</span>.<span class="ident">event_rx</span>),
+            <span class="ident">black</span>.<span class="ident">attach</span>(<span class="ident">black_rx</span>, <span class="ident">black_tx</span>),
+            <span class="ident">white</span>.<span class="ident">attach</span>(<span class="ident">white_rx</span>, <span class="ident">white_tx</span>),
+        )
+        .<span class="number">0</span>
+    }
+
+    <span class="doccomment">/// Starts a game with the given players silently.</span>
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">start_silent</span>(<span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">black</span>: <span class="kw">impl</span> <span class="ident">Player</span>, <span class="ident">white</span>: <span class="kw">impl</span> <span class="ident">Player</span>) -&gt; <span class="ident">GameResult</span> {
+        <span class="kw">let</span> (<span class="ident">black_rx</span>, <span class="ident">white_rx</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">ctrl</span>.<span class="ident">subscribe</span>();
+        <span class="kw">let</span> (<span class="ident">black_tx</span>, <span class="ident">white_tx</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">cmd_tx</span>.<span class="ident">split</span>();
+        <span class="macro">tokio::join!</span>(
+            <span class="self">self</span>.<span class="ident">ctrl</span>.<span class="ident">start</span>(),
+            <span class="ident">black</span>.<span class="ident">attach</span>(<span class="ident">black_rx</span>, <span class="ident">black_tx</span>),
+            <span class="ident">white</span>.<span class="ident">attach</span>(<span class="ident">white_rx</span>, <span class="ident">white_tx</span>),
+        )
+        .<span class="number">0</span>
     }
 }
 
@@ -628,5 +634,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="connect6" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (76761db59 2022-05-24)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="connect6" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (4cbaac699 2022-05-25)" ></div>
 </body></html>
