@@ -21,7 +21,7 @@ async fn main() {
 
 Demonstration:
 
-![Demonstration](/assets//console.png)
+![Demonstration](/assets/console.png)
 
 For records of real life games: [records](/records).
 
