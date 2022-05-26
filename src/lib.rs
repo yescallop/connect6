@@ -91,26 +91,29 @@ pub struct Handle {
 }
 
 impl Handle {
-    /// Starts a game with the given players, logging the events to the console if needed.
-    pub async fn start(mut self, log: bool, black: impl Player, white: impl Player) -> GameResult {
+    /// Starts a game with the given players, logging the events to the console.
+    pub async fn start(mut self, black: impl Player, white: impl Player) -> GameResult {
         let (black_rx, white_rx) = self.ctrl.subscribe();
         let (black_tx, white_tx) = self.cmd_tx.split();
-        if log {
-            tokio::join!(
-                self.ctrl.start(),
-                console::log(self.event_rx),
-                black.attach(black_rx, black_tx),
-                white.attach(white_rx, white_tx),
-            )
-            .0
-        } else {
-            tokio::join!(
-                self.ctrl.start(),
-                black.attach(black_rx, black_tx),
-                white.attach(white_rx, white_tx),
-            )
-            .0
-        }
+        tokio::join!(
+            self.ctrl.start(),
+            console::log(self.event_rx),
+            black.attach(black_rx, black_tx),
+            white.attach(white_rx, white_tx),
+        )
+        .0
+    }
+
+    /// Starts a game with the given players silently.
+    pub async fn start_silent(mut self, black: impl Player, white: impl Player) -> GameResult {
+        let (black_rx, white_rx) = self.ctrl.subscribe();
+        let (black_tx, white_tx) = self.cmd_tx.split();
+        tokio::join!(
+            self.ctrl.start(),
+            black.attach(black_rx, black_tx),
+            white.attach(white_rx, white_tx),
+        )
+        .0
     }
 }
 
