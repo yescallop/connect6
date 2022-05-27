@@ -298,7 +298,7 @@ impl SqrMat {
 
         // SAFETY: The caller must ensure that `len != 0`.
         // A zero-initialized `Slot` is valid since all its fields can hold 0.
-        let ptr = NonNull::new(unsafe { alloc::alloc_zeroed(layout) })
+        let ptr = NonNull::new(alloc::alloc_zeroed(layout))
             .unwrap_or_else(|| alloc::handle_alloc_error(layout))
             .cast();
 
@@ -418,7 +418,7 @@ impl Board {
     /// Returns `true` if there is a six or overline of the given stone through the point.
     ///
     /// This method assumes that the slot at the point is occupied by the given stone.
-    pub fn is_win_at(&self, p: Point, stone: Stone) -> bool {
+    pub fn detect_six(&self, p: Point, stone: Stone) -> bool {
         self.row_len_any(p, stone, |l| l >= 6)
     }
 

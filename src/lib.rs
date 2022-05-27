@@ -1,5 +1,4 @@
 #![warn(rust_2018_idioms, unreachable_pub, missing_docs)]
-#![deny(unsafe_op_in_unsafe_fn)]
 
 //! A library for hosting [Connect6] games asynchronously.
 //!
@@ -29,6 +28,9 @@ pub mod console;
 pub mod player;
 
 use player::Player;
+
+/// Highly optimized algorithms for game solving.
+pub mod algorithm;
 
 macro_rules! ensure {
     ($cond:expr, $err:expr) => {
@@ -91,7 +93,7 @@ pub struct Handle {
 }
 
 impl Handle {
-    /// Starts a game with the given players, logging the events to the console.
+    /// Starts a game with the given players, logging the events in the console.
     pub async fn start(mut self, black: impl Player, white: impl Player) -> GameResult {
         let (black_rx, white_rx) = self.ctrl.subscribe();
         let (black_tx, white_tx) = self.cmd_tx.split();
@@ -281,7 +283,7 @@ impl Control {
 
                     self.make_move(stone, Some(mov));
 
-                    if self.board.is_win_at(mov.0, stone) || self.board.is_win_at(mov.1, stone) {
+                    if self.board.detect_six(mov.0, stone) || self.board.detect_six(mov.1, stone) {
                         self.end(GameResultKind::RowCompleted, stone);
                     }
                     self.last_pass = false;
