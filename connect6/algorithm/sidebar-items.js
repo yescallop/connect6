@@ -1,0 +1,1 @@
+initSidebarItems({"constant":[["SIZE","The board size used by the algorithms in this module."]],"struct":[["BitBoard","A bit-packed Connect6 board with optimized six detection."]]});
