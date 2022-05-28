@@ -165,28 +165,6 @@
 <span id="158">158</span>
 <span id="159">159</span>
 <span id="160">160</span>
-<span id="161">161</span>
-<span id="162">162</span>
-<span id="163">163</span>
-<span id="164">164</span>
-<span id="165">165</span>
-<span id="166">166</span>
-<span id="167">167</span>
-<span id="168">168</span>
-<span id="169">169</span>
-<span id="170">170</span>
-<span id="171">171</span>
-<span id="172">172</span>
-<span id="173">173</span>
-<span id="174">174</span>
-<span id="175">175</span>
-<span id="176">176</span>
-<span id="177">177</span>
-<span id="178">178</span>
-<span id="179">179</span>
-<span id="180">180</span>
-<span id="181">181</span>
-<span id="182">182</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std::alloc</span>::{<span class="self">self</span>, <span class="ident">Layout</span>};
 
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::board</span>::{<span class="ident">Point</span>, <span class="ident">Stone</span>};
@@ -245,9 +223,11 @@
 
     <span class="doccomment">/// Sets the stone at the point.</span>
     <span class="doccomment">///</span>
+    <span class="doccomment">/// It is incorrect behavior to call this method if a stone is already at the point.</span>
+    <span class="doccomment">///</span>
     <span class="doccomment">/// # Safety</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// Behavior is undefined if the point is out of board or a stone is already there.</span>
+    <span class="doccomment">/// Behavior is undefined if the point is out of board.</span>
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="kw">pub</span> <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">set</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">p</span>: <span class="ident">Point</span>, <span class="ident">stone</span>: <span class="ident">Stone</span>) {
         <span class="kw">let</span> <span class="ident">store</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">stone</span> {
@@ -272,9 +252,11 @@
 
     <span class="doccomment">/// Returns `true` if there is a six or overline of the given stone through the point.</span>
     <span class="doccomment">///</span>
+    <span class="doccomment">/// It is incorrect behavior to call this method if no any stone is at the point.</span>
+    <span class="doccomment">///</span>
     <span class="doccomment">/// # Safety</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// Behavior is undefined if the point is out of board or no any stone is there.</span>
+    <span class="doccomment">/// Behavior is undefined if the point is out of board.</span>
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="kw">pub</span> <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">detect_six</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">p</span>: <span class="ident">Point</span>, <span class="ident">stone</span>: <span class="ident">Stone</span>) -&gt; <span class="ident">bool</span> {
         <span class="kw">let</span> <span class="ident">store</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">stone</span> {
@@ -328,47 +310,21 @@
         <span class="ident">len</span> <span class="op">&gt;</span><span class="op">=</span> <span class="number">6</span>
     }
 
-    <span class="doccomment">/// Sets the stone at the point and does `detect_six`.</span>
+    <span class="doccomment">/// Sets the stone at the point and returns the result of [`detect_six`].</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// It is incorrect behavior to call this method if a stone is already at the point.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// [`detect_six`]: Self::detect_six</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// # Safety</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// Behavior is undefined if the point is out of board or a stone is already there.</span>
+    <span class="doccomment">/// Behavior is undefined if the point is out of board.</span>
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="kw">pub</span> <span class="kw">unsafe</span> <span class="kw">fn</span> <span class="ident">set_and_detect_six</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">p</span>: <span class="ident">Point</span>, <span class="ident">stone</span>: <span class="ident">Stone</span>) -&gt; <span class="ident">bool</span> {
-        <span class="kw">let</span> <span class="ident">store</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">stone</span> {
-            <span class="ident">Stone::Black</span> =&gt; <span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">black</span>,
-            <span class="ident">Stone::White</span> =&gt; <span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">white</span>,
-        };
-
-        <span class="kw">let</span> <span class="ident">v</span> <span class="op">=</span> <span class="ident">store</span>.<span class="ident">h</span>.<span class="ident">get_unchecked_mut</span>(<span class="ident">p</span>.<span class="ident">y</span> <span class="kw">as</span> <span class="ident">usize</span>);
-        <span class="kw-2">*</span><span class="ident">v</span> <span class="op">|</span><span class="op">=</span> <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">p</span>.<span class="ident">x</span>;
-
-        <span class="kw">let</span> <span class="ident">r</span> <span class="op">=</span> <span class="ident">v</span>.<span class="ident">rotate_right</span>(<span class="ident">p</span>.<span class="ident">x</span>);
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">len</span> <span class="op">=</span> <span class="ident">r</span>.<span class="ident">trailing_ones</span>() <span class="op">+</span> <span class="ident">r</span>.<span class="ident">leading_ones</span>();
-
-        <span class="kw">let</span> <span class="ident">v</span> <span class="op">=</span> <span class="ident">store</span>.<span class="ident">v</span>.<span class="ident">get_unchecked_mut</span>(<span class="ident">p</span>.<span class="ident">x</span> <span class="kw">as</span> <span class="ident">usize</span>);
-        <span class="kw-2">*</span><span class="ident">v</span> <span class="op">|</span><span class="op">=</span> <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">p</span>.<span class="ident">y</span>;
-
-        <span class="kw">let</span> <span class="ident">r</span> <span class="op">=</span> <span class="ident">v</span>.<span class="ident">rotate_right</span>(<span class="ident">p</span>.<span class="ident">y</span>);
-        <span class="ident">len</span> <span class="op">=</span> <span class="ident">len</span>.<span class="ident">max</span>(<span class="ident">r</span>.<span class="ident">trailing_ones</span>() <span class="op">+</span> <span class="ident">r</span>.<span class="ident">leading_ones</span>());
-
-        <span class="kw">let</span> <span class="ident">i</span> <span class="op">=</span> (<span class="ident">SIZE</span> <span class="op">-</span> <span class="number">1</span>) <span class="kw">as</span> <span class="ident">u32</span> <span class="op">+</span> <span class="ident">p</span>.<span class="ident">x</span> <span class="op">-</span> <span class="ident">p</span>.<span class="ident">y</span>;
-        <span class="kw">let</span> <span class="ident">v</span> <span class="op">=</span> <span class="ident">store</span>.<span class="ident">a</span>.<span class="ident">get_unchecked_mut</span>(<span class="ident">i</span> <span class="kw">as</span> <span class="ident">usize</span>);
-        <span class="kw-2">*</span><span class="ident">v</span> <span class="op">|</span><span class="op">=</span> <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">p</span>.<span class="ident">y</span>;
-
-        <span class="kw">let</span> <span class="ident">r</span> <span class="op">=</span> <span class="ident">v</span>.<span class="ident">rotate_right</span>(<span class="ident">p</span>.<span class="ident">y</span>);
-        <span class="ident">len</span> <span class="op">=</span> <span class="ident">len</span>.<span class="ident">max</span>(<span class="ident">r</span>.<span class="ident">trailing_ones</span>() <span class="op">+</span> <span class="ident">r</span>.<span class="ident">leading_ones</span>());
-
-        <span class="kw">let</span> <span class="ident">i</span> <span class="op">=</span> <span class="ident">p</span>.<span class="ident">x</span> <span class="op">+</span> <span class="ident">p</span>.<span class="ident">y</span>;
-        <span class="kw">let</span> <span class="ident">v</span> <span class="op">=</span> <span class="ident">store</span>.<span class="ident">d</span>.<span class="ident">get_unchecked_mut</span>(<span class="ident">i</span> <span class="kw">as</span> <span class="ident">usize</span>);
-        <span class="kw-2">*</span><span class="ident">v</span> <span class="op">|</span><span class="op">=</span> <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">p</span>.<span class="ident">y</span>;
-
-        <span class="kw">let</span> <span class="ident">r</span> <span class="op">=</span> <span class="ident">v</span>.<span class="ident">rotate_right</span>(<span class="ident">p</span>.<span class="ident">y</span>);
-        <span class="ident">len</span> <span class="op">=</span> <span class="ident">len</span>.<span class="ident">max</span>(<span class="ident">r</span>.<span class="ident">trailing_ones</span>() <span class="op">+</span> <span class="ident">r</span>.<span class="ident">leading_ones</span>());
-
-        <span class="ident">len</span> <span class="op">&gt;</span><span class="op">=</span> <span class="number">6</span>
+        <span class="self">self</span>.<span class="ident">set</span>(<span class="ident">p</span>, <span class="ident">stone</span>);
+        <span class="self">self</span>.<span class="ident">detect_six</span>(<span class="ident">p</span>, <span class="ident">stone</span>)
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="connect6" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (490324f7b 2022-05-26)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="connect6" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (ebbcbfc23 2022-05-27)" ></div>
 </body></html>
