@@ -7,10 +7,31 @@ pub const SIZE: usize = 19;
 
 const DIAG_SIZE: usize = SIZE * 2 - 1;
 
-/// A bit-packed Connect6 board with optimized *six detection*.
-///
-/// The *six detection* code should be branchless if instructions `LZCNT` and `TZCNT` are supported.
-/// You could even see it _vectorized_ with Intel `AVX512_VPOPCNTDQ` feature set enabled.
+/// A bit-packed Connect6 board with optimized win checking algorithm.
+/// 
+/// Use `RUSTFLAGS='-C target-cpu=native'` for maximum performance on your machine.
+/// 
+/// The win check should be branchless if target features `bmi1` and `lzcnt` are enabled.
+/// You could even see some decent [auto vectorization] with adequate `AVX-512` support.
+/// 
+/// [auto vectorization]: https://github.com/yescallop/connect6/blob/main/assets/check_win_avx512.asm
+/// 
+/// Here are some benchmark results on a Tiger Lake processor (100 runs per iteration):
+/// 
+/// ```text
+/// Naive:
+/// test bench_check_win_naive_best  ... bench:         758 ns/iter (+/- 21)
+/// test bench_check_win_naive_worst ... bench:       2,587 ns/iter (+/- 47)
+/// 
+/// Default:
+/// test bench_check_win             ... bench:         416 ns/iter (+/- 13)
+/// 
+/// BMI1 + LZCNT:
+/// test bench_check_win             ... bench:         288 ns/iter (+/- 10)
+/// 
+/// AVX-512:
+/// test bench_check_win             ... bench:         151 ns/iter (+/- 12)
+/// ```
 #[derive(Clone)]
 pub struct BitBoard {
     black: Store,
@@ -91,7 +112,7 @@ impl BitBoard {
     ///
     /// Behavior is undefined if the point is out of board.
     #[inline]
-    pub unsafe fn detect_six(&self, p: Point, stone: Stone) -> bool {
+    pub unsafe fn check_win(&self, p: Point, stone: Stone) -> bool {
         let store = match stone {
             Stone::Black => &self.black,
             Stone::White => &self.white,
@@ -120,7 +141,7 @@ impl BitBoard {
     ///
     /// Behavior is undefined if the point is out of board.
     #[inline]
-    pub unsafe fn detect_six_potential(&self, p: Point, stone: Stone) -> bool {
+    pub unsafe fn check_win_potential(&self, p: Point, stone: Stone) -> bool {
         let store = match stone {
             Stone::Black => &self.black,
             Stone::White => &self.white,
@@ -143,18 +164,18 @@ impl BitBoard {
         len >= 6
     }
 
-    /// Sets the stone at the point and returns the result of [`detect_six`].
+    /// Sets the stone at the point and returns the result of [`check_win`].
     ///
     /// It is incorrect behavior to call this method if a stone is already at the point.
     ///
-    /// [`detect_six`]: Self::detect_six
+    /// [`check_win`]: Self::check_win
     ///
     /// # Safety
     ///
     /// Behavior is undefined if the point is out of board.
     #[inline]
-    pub unsafe fn set_and_detect_six(&mut self, p: Point, stone: Stone) -> bool {
+    pub unsafe fn set_and_check_win(&mut self, p: Point, stone: Stone) -> bool {
         self.set(p, stone);
-        self.detect_six(p, stone)
+        self.check_win(p, stone)
     }
 }

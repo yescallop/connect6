@@ -418,7 +418,7 @@ impl Board {
     /// Returns `true` if there is a six or overline of the given stone through the point.
     ///
     /// This method assumes that the slot at the point is occupied by the given stone.
-    pub fn detect_six(&self, p: Point, stone: Stone) -> bool {
+    pub fn check_win(&self, p: Point, stone: Stone) -> bool {
         self.row_len_any(p, stone, |l| l >= 6)
     }
 

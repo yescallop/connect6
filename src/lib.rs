@@ -283,7 +283,7 @@ impl Control {
 
                     self.make_move(stone, Some(mov));
 
-                    if self.board.detect_six(mov.0, stone) || self.board.detect_six(mov.1, stone) {
+                    if self.board.check_win(mov.0, stone) || self.board.check_win(mov.1, stone) {
                         self.end(GameResultKind::RowCompleted, stone);
                     }
                     self.last_pass = false;
