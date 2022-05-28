@@ -1039,7 +1039,7 @@
     <span class="doccomment">/// Returns `true` if there is a six or overline of the given stone through the point.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// This method assumes that the slot at the point is occupied by the given stone.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">detect_six</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">p</span>: <span class="ident">Point</span>, <span class="ident">stone</span>: <span class="ident">Stone</span>) -&gt; <span class="ident">bool</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">check_win</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">p</span>: <span class="ident">Point</span>, <span class="ident">stone</span>: <span class="ident">Stone</span>) -&gt; <span class="ident">bool</span> {
         <span class="self">self</span>.<span class="ident">row_len_any</span>(<span class="ident">p</span>, <span class="ident">stone</span>, <span class="op">|</span><span class="ident">l</span><span class="op">|</span> <span class="ident">l</span> <span class="op">&gt;</span><span class="op">=</span> <span class="number">6</span>)
     }
 

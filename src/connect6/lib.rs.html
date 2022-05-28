@@ -606,7 +606,7 @@
 
                     <span class="self">self</span>.<span class="ident">make_move</span>(<span class="ident">stone</span>, <span class="prelude-val">Some</span>(<span class="ident">mov</span>));
 
-                    <span class="kw">if</span> <span class="self">self</span>.<span class="ident">board</span>.<span class="ident">detect_six</span>(<span class="ident">mov</span>.<span class="number">0</span>, <span class="ident">stone</span>) <span class="op">|</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">board</span>.<span class="ident">detect_six</span>(<span class="ident">mov</span>.<span class="number">1</span>, <span class="ident">stone</span>) {
+                    <span class="kw">if</span> <span class="self">self</span>.<span class="ident">board</span>.<span class="ident">check_win</span>(<span class="ident">mov</span>.<span class="number">0</span>, <span class="ident">stone</span>) <span class="op">|</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">board</span>.<span class="ident">check_win</span>(<span class="ident">mov</span>.<span class="number">1</span>, <span class="ident">stone</span>) {
                         <span class="self">self</span>.<span class="ident">end</span>(<span class="ident">GameResultKind::RowCompleted</span>, <span class="ident">stone</span>);
                     }
                     <span class="self">self</span>.<span class="ident">last_pass</span> <span class="op">=</span> <span class="bool-val">false</span>;
