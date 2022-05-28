@@ -9,13 +9,15 @@ use connect6::{
 use test::{black_box, Bencher};
 
 const CENTER: Point = Point::new(9, 9);
+const RUNS_PER_ITER: u32 = 100;
 
 #[bench]
 fn bench_detect_six(b: &mut Bencher) {
     let board = BitBoard::new();
     b.iter(|| unsafe {
-        for _ in 0..100 {
-            black_box(board.detect_six(black_box(CENTER), black_box(Stone::Black)));
+        let p = black_box(CENTER);
+        for _ in 0..RUNS_PER_ITER {
+            black_box(board.detect_six(p, Stone::Black));
         }
     })
 }
@@ -24,8 +26,9 @@ fn bench_detect_six(b: &mut Bencher) {
 fn bench_detect_six_potential(b: &mut Bencher) {
     let board = BitBoard::new();
     b.iter(|| unsafe {
-        for _ in 0..100 {
-            black_box(board.detect_six_potential(black_box(CENTER), black_box(Stone::Black)));
+        let p = black_box(CENTER);
+        for _ in 0..RUNS_PER_ITER {
+            black_box(board.detect_six_potential(p, Stone::Black));
         }
     })
 }
@@ -34,8 +37,9 @@ fn bench_detect_six_potential(b: &mut Bencher) {
 fn bench_set_and_detect_six(b: &mut Bencher) {
     let mut board = BitBoard::new();
     b.iter(|| unsafe {
-        for _ in 0..100 {
-            black_box(board.set_and_detect_six(black_box(CENTER), black_box(Stone::Black)));
+        let p = black_box(CENTER);
+        for _ in 0..RUNS_PER_ITER {
+            black_box(board.set_and_detect_six(p, Stone::Black));
         }
     })
 }
@@ -44,7 +48,7 @@ fn bench_set_and_detect_six(b: &mut Bencher) {
 fn bench_detect_six_naive_best(b: &mut Bencher) {
     let board = Board::new(19);
     b.iter(|| {
-        for _ in 0..100 {
+        for _ in 0..RUNS_PER_ITER {
             board.detect_six((0, 0).into(), Stone::Black);
         }
     })
@@ -60,7 +64,7 @@ fn bench_detect_six_naive_worst(b: &mut Bencher) {
         board.make_move(((9 + i, 9 - i).into(), (9 - i, 9 + i).into()), Stone::Black);
     }
     b.iter(|| {
-        for _ in 0..100 {
+        for _ in 0..RUNS_PER_ITER {
             board.detect_six(CENTER, Stone::Black);
         }
     })

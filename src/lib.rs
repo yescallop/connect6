@@ -29,7 +29,7 @@ pub mod player;
 
 use player::Player;
 
-/// Highly optimized algorithms for game solving.
+/// Heavily optimized algorithms for game solving.
 pub mod algorithm;
 
 macro_rules! ensure {

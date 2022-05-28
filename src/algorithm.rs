@@ -56,9 +56,11 @@ impl BitBoard {
 
     /// Sets the stone at the point.
     ///
+    /// It is incorrect behavior to call this method if a stone is already at the point.
+    ///
     /// # Safety
     ///
-    /// Behavior is undefined if the point is out of board or a stone is already there.
+    /// Behavior is undefined if the point is out of board.
     #[inline]
     pub unsafe fn set(&mut self, p: Point, stone: Stone) {
         let store = match stone {
@@ -83,9 +85,11 @@ impl BitBoard {
 
     /// Returns `true` if there is a six or overline of the given stone through the point.
     ///
+    /// It is incorrect behavior to call this method if no any stone is at the point.
+    ///
     /// # Safety
     ///
-    /// Behavior is undefined if the point is out of board or no any stone is there.
+    /// Behavior is undefined if the point is out of board.
     #[inline]
     pub unsafe fn detect_six(&self, p: Point, stone: Stone) -> bool {
         let store = match stone {
@@ -139,44 +143,18 @@ impl BitBoard {
         len >= 6
     }
 
-    /// Sets the stone at the point and does `detect_six`.
+    /// Sets the stone at the point and returns the result of [`detect_six`].
+    ///
+    /// It is incorrect behavior to call this method if a stone is already at the point.
+    ///
+    /// [`detect_six`]: Self::detect_six
     ///
     /// # Safety
     ///
-    /// Behavior is undefined if the point is out of board or a stone is already there.
+    /// Behavior is undefined if the point is out of board.
     #[inline]
     pub unsafe fn set_and_detect_six(&mut self, p: Point, stone: Stone) -> bool {
-        let store = match stone {
-            Stone::Black => &mut self.black,
-            Stone::White => &mut self.white,
-        };
-
-        let v = store.h.get_unchecked_mut(p.y as usize);
-        *v |= 1 << p.x;
-
-        let r = v.rotate_right(p.x);
-        let mut len = r.trailing_ones() + r.leading_ones();
-
-        let v = store.v.get_unchecked_mut(p.x as usize);
-        *v |= 1 << p.y;
-
-        let r = v.rotate_right(p.y);
-        len = len.max(r.trailing_ones() + r.leading_ones());
-
-        let i = (SIZE - 1) as u32 + p.x - p.y;
-        let v = store.a.get_unchecked_mut(i as usize);
-        *v |= 1 << p.y;
-
-        let r = v.rotate_right(p.y);
-        len = len.max(r.trailing_ones() + r.leading_ones());
-
-        let i = p.x + p.y;
-        let v = store.d.get_unchecked_mut(i as usize);
-        *v |= 1 << p.y;
-
-        let r = v.rotate_right(p.y);
-        len = len.max(r.trailing_ones() + r.leading_ones());
-
-        len >= 6
+        self.set(p, stone);
+        self.detect_six(p, stone)
     }
 }
