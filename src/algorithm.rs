@@ -10,7 +10,7 @@ const DIAG_SIZE: usize = SIZE * 2 - 1;
 /// A bit-packed Connect6 board with optimized *six detection*.
 ///
 /// The *six detection* code should be branchless if instructions `LZCNT` and `TZCNT` are supported.
-/// You could even see it _vectorized_ with the latest `AVX512` support.
+/// You could even see it _vectorized_ with Intel `AVX512_VPOPCNTDQ` feature set enabled.
 #[derive(Clone)]
 pub struct BitBoard {
     black: Store,
@@ -39,7 +39,7 @@ impl BitBoard {
         if ptr.is_null() {
             alloc::handle_alloc_error(layout);
         }
-        // SAFETY: `ptr` is allocated with `Global` with a correct layout.
+        // SAFETY: `ptr` is allocated with `Global` and a correct layout.
         unsafe { Box::from_raw(ptr.cast()) }
     }
 
