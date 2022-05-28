@@ -177,7 +177,7 @@
 <span class="doccomment">/// A bit-packed Connect6 board with optimized *six detection*.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// The *six detection* code should be branchless if instructions `LZCNT` and `TZCNT` are supported.</span>
-<span class="doccomment">/// You could even see it _vectorized_ with the latest `AVX512` support.</span>
+<span class="doccomment">/// You could even see it _vectorized_ with Intel `AVX512_VPOPCNTDQ` feature set enabled.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">BitBoard</span> {
     <span class="ident">black</span>: <span class="ident">Store</span>,
@@ -206,7 +206,7 @@
         <span class="kw">if</span> <span class="ident">ptr</span>.<span class="ident">is_null</span>() {
             <span class="ident">alloc::handle_alloc_error</span>(<span class="ident">layout</span>);
         }
-        <span class="comment">// SAFETY: `ptr` is allocated with `Global` with a correct layout.</span>
+        <span class="comment">// SAFETY: `ptr` is allocated with `Global` and a correct layout.</span>
         <span class="kw">unsafe</span> { <span class="ident">Box::from_raw</span>(<span class="ident">ptr</span>.<span class="ident">cast</span>()) }
     }
 
