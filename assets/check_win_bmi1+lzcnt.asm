@@ -1,5 +1,5 @@
 BitBoard::check_win:
-    mov	r10d, edx
+	mov	r10d, edx
 	lea	r11, [rcx + 448]
 	cmp	r9b, 1
 	cmove	r11, rcx
