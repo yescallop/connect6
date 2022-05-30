@@ -35,15 +35,7 @@ BitBoard::check_win:
 	; xmm0 = ((!r - 1) & r).count_ones() + (!r).leading_zeros()
 	;      = r.trailing_ones() + r.leading_ones()
 	vpaddd	xmm0, xmm0, xmm1
-	; xmm1 = xmm0[2, 3, 2, 3]
-	vpshufd	xmm1, xmm0, 238
-	; xmm0 = [max(xmm0[0], xmm0[2]), max(xmm0[1], xmm0[3]), ..]
-	vpmaxud	xmm0, xmm0, xmm1
-	; xmm1 = xmm0[1, 1, 1, 1]
-	vpshufd	xmm1, xmm0, 85
-	; xmm1 = [max(xmm0[0], xmm0[1]), ..]
-	vpmaxud	xmm0, xmm0, xmm1
-	; eax = xmm0[0]
-	vmovd	eax, xmm0
-	cmp	eax, 6
-	setae	al
+	vpcmpnleud	k0, xmm0, dword ptr [rip + __real@00000005]{1to4}
+	kortestb	k0, k0
+	setne	al
+	ret

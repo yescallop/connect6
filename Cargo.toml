@@ -9,3 +9,10 @@ async-trait = "0.1.53"
 displaydoc = "0.2.3"
 thiserror = "1.0"
 tokio = { version = "1.18.2", features = ["macros", "rt", "sync"] }
+
+[dev-dependencies]
+criterion = { version = "0.3", features = ["html_reports"] }
+
+[[bench]]
+name = "algorithm"
+harness = false

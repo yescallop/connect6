@@ -8,30 +8,13 @@ pub const SIZE: usize = 19;
 const DIAG_SIZE: usize = SIZE * 2 - 1;
 
 /// A bit-packed Connect6 board with optimized win checking algorithm.
-/// 
+///
 /// Use `RUSTFLAGS='-C target-cpu=native'` for maximum performance on your machine.
-/// 
+///
 /// The win check should be branchless if target features `bmi1` and `lzcnt` are enabled.
 /// You could even see some decent [auto vectorization] with adequate `AVX-512` support.
-/// 
+///
 /// [auto vectorization]: https://github.com/yescallop/connect6/blob/main/assets/check_win_avx512.asm
-/// 
-/// Here are some benchmark results on a Tiger Lake processor (100 runs per iteration):
-/// 
-/// ```text
-/// Naive:
-/// test bench_check_win_naive_best  ... bench:         758 ns/iter (+/- 21)
-/// test bench_check_win_naive_worst ... bench:       2,587 ns/iter (+/- 47)
-/// 
-/// Default:
-/// test bench_check_win             ... bench:         416 ns/iter (+/- 13)
-/// 
-/// BMI1 + LZCNT:
-/// test bench_check_win             ... bench:         288 ns/iter (+/- 10)
-/// 
-/// AVX-512:
-/// test bench_check_win             ... bench:         151 ns/iter (+/- 12)
-/// ```
 #[derive(Clone)]
 pub struct BitBoard {
     black: Store,
@@ -117,22 +100,23 @@ impl BitBoard {
             Stone::Black => &self.black,
             Stone::White => &self.white,
         };
+        let mut res = false;
 
         let v = store.h.get_unchecked(p.y as usize).rotate_right(p.x);
-        let mut len = v.trailing_ones() + v.leading_ones();
+        res |= v.trailing_ones() + v.leading_ones() >= 6;
 
         let v = store.v.get_unchecked(p.x as usize).rotate_right(p.y);
-        len = len.max(v.trailing_ones() + v.leading_ones());
+        res |= v.trailing_ones() + v.leading_ones() >= 6;
 
         let i = (SIZE - 1) as u32 + p.x - p.y;
         let v = store.a.get_unchecked(i as usize).rotate_right(p.y);
-        len = len.max(v.trailing_ones() + v.leading_ones());
+        res |= v.trailing_ones() + v.leading_ones() >= 6;
 
         let i = p.x + p.y;
         let v = store.d.get_unchecked(i as usize).rotate_right(p.y);
-        len = len.max(v.trailing_ones() + v.leading_ones());
+        res |= v.trailing_ones() + v.leading_ones() >= 6;
 
-        len >= 6
+        res
     }
 
     /// Returns `true` if there is a potential six or overline of the given stone through the point.
@@ -146,22 +130,23 @@ impl BitBoard {
             Stone::Black => &self.black,
             Stone::White => &self.white,
         };
+        let mut res = false;
 
         let v = store.h.get_unchecked(p.y as usize).rotate_right(p.x) | 1;
-        let mut len = v.trailing_ones() + v.leading_ones();
+        res |= v.trailing_ones() + v.leading_ones() >= 6;
 
         let v = store.v.get_unchecked(p.x as usize).rotate_right(p.y) | 1;
-        len = len.max(v.trailing_ones() + v.leading_ones());
+        res |= v.trailing_ones() + v.leading_ones() >= 6;
 
         let i = (SIZE - 1) as u32 + p.x - p.y;
         let v = store.a.get_unchecked(i as usize).rotate_right(p.y) | 1;
-        len = len.max(v.trailing_ones() + v.leading_ones());
+        res |= v.trailing_ones() + v.leading_ones() >= 6;
 
         let i = p.x + p.y;
         let v = store.d.get_unchecked(i as usize).rotate_right(p.y) | 1;
-        len = len.max(v.trailing_ones() + v.leading_ones());
+        res |= v.trailing_ones() + v.leading_ones() >= 6;
 
-        len >= 6
+        res
     }
 
     /// Sets the stone at the point and returns the result of [`check_win`].
@@ -175,7 +160,34 @@ impl BitBoard {
     /// Behavior is undefined if the point is out of board.
     #[inline]
     pub unsafe fn set_and_check_win(&mut self, p: Point, stone: Stone) -> bool {
-        self.set(p, stone);
-        self.check_win(p, stone)
+        #[inline]
+        unsafe fn set_and_get(row: &mut [u32], i: u32) -> u32 {
+            let slot = row.get_unchecked_mut(i as usize);
+            let v = *slot |  (1 << i);
+            *slot = v;
+            v
+        }
+
+        let store = match stone {
+            Stone::Black => &mut self.black,
+            Stone::White => &mut self.white,
+        };
+        let mut res = false;
+
+        let v = set_and_get(&mut store.h, p.y).rotate_right(p.x);
+        res |= v.trailing_ones() + v.leading_ones() >= 6;
+
+        let v = set_and_get(&mut store.v, p.x).rotate_right(p.y);
+        res |= v.trailing_ones() + v.leading_ones() >= 6;
+
+        let i = (SIZE - 1) as u32 + p.x - p.y;
+        let v = set_and_get(&mut store.a, i).rotate_right(p.y);
+        res |= v.trailing_ones() + v.leading_ones() >= 6;
+
+        let i = p.x + p.y;
+        let v = set_and_get(&mut store.d, i).rotate_right(p.y);
+        res |= v.trailing_ones() + v.leading_ones() >= 6;
+
+        res
     }
 }
