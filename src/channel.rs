@@ -16,10 +16,6 @@ pub struct CmdSender {
 
 impl CmdSender {
     /// Splits a full command sender into stone-specific (Black, White) senders.
-    ///
-    /// # Panics
-    ///
-    /// Panics if this sender is not anonymous.
     pub fn split(tx: Sender<FullCmd>) -> (Self, Self) {
         (
             Self {

@@ -270,8 +270,7 @@ impl Slot {
 }
 
 /// A square matrix.
-#[derive(Debug, Copy, Clone)]
-#[repr(transparent)]
+#[derive(Copy, Clone)]
 struct SqrMat {
     ptr: NonNull<Slot>,
 }

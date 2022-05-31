@@ -28,7 +28,7 @@ For records of real life games: [records](/records).
 ## Roadmap
 
 - Server & clients.
-- Implement AI players with different algorithms (Alpha-beta pruning, AlphaZero, etc.).
+- Implement AI players with different algorithms (Alpha-beta pruning, MCTS, AlphaZero, etc.).
 
 ## License
 

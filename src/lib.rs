@@ -83,7 +83,7 @@ impl Default for Builder {
 pub struct Handle {
     /// The global event receiver.
     pub event_rx: Receiver<FullEvent>,
-    /// The command sender.
+    /// The full command sender.
     pub cmd_tx: Sender<FullCmd>,
     /// The game control.
     pub ctrl: Box<Control>,
