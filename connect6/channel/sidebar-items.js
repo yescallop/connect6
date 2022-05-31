@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["CmdSender","A command sender."]]});
+initSidebarItems({"struct":[["CmdSender","A stone-specific command sender."]]});

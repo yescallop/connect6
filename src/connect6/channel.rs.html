@@ -71,74 +71,44 @@
 <span id="64">64</span>
 <span id="65">65</span>
 <span id="66">66</span>
-<span id="67">67</span>
-<span id="68">68</span>
-<span id="69">69</span>
-<span id="70">70</span>
-<span id="71">71</span>
-<span id="72">72</span>
-<span id="73">73</span>
-<span id="74">74</span>
-<span id="75">75</span>
-<span id="76">76</span>
-<span id="77">77</span>
-<span id="78">78</span>
-<span id="79">79</span>
-<span id="80">80</span>
-<span id="81">81</span>
-<span id="82">82</span>
 </pre><pre class="rust"><code><span class="attribute">#[<span class="ident">doc</span>(<span class="ident">no_inline</span>)]</span>
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">tokio::sync::mpsc</span>::{<span class="ident">UnboundedReceiver</span> <span class="kw">as</span> <span class="ident">Receiver</span>, <span class="ident">UnboundedSender</span> <span class="kw">as</span> <span class="ident">Sender</span>};
-
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">mem::ManuallyDrop</span>, <span class="ident">ptr</span>};
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">board</span>::{<span class="ident">Point</span>, <span class="ident">Stone</span>},
     <span class="ident">message</span>::{<span class="ident">Cmd</span>, <span class="ident">FullCmd</span>},
 };
 
-<span class="doccomment">/// A command sender.</span>
+<span class="doccomment">/// A stone-specific command sender.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// Drop the sender to disconnect from the game.</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">CmdSender</span> {
     <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">tx</span>: <span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">FullCmd</span><span class="op">&gt;</span>,
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">stone</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Stone</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">stone</span>: <span class="ident">Stone</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">CmdSender</span> {
-    <span class="doccomment">/// Consumes this `CmdSender` and returns the underlying full command sender.</span>
+    <span class="doccomment">/// Splits a full command sender into stone-specific (Black, White) senders.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// # Panics</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// Panics if this sender is not anonymous.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">into_full</span>(<span class="self">self</span>) -&gt; <span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">FullCmd</span><span class="op">&gt;</span> {
-        <span class="macro">assert!</span>(<span class="self">self</span>.<span class="ident">stone</span>.<span class="ident">is_none</span>());
-        <span class="kw">let</span> <span class="ident">me</span> <span class="op">=</span> <span class="ident">ManuallyDrop::new</span>(<span class="self">self</span>);
-        <span class="kw">unsafe</span> { <span class="ident">ptr::read</span>(<span class="kw-2">&amp;</span><span class="ident">me</span>.<span class="ident">tx</span>) }
-    }
-
-    <span class="doccomment">/// Splits this anonymous sender into stone-specific (Black, White) senders.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// # Panics</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Panics if this sender is not anonymous.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">split</span>(<span class="self">self</span>) -&gt; (<span class="self">Self</span>, <span class="self">Self</span>) {
-        <span class="macro">assert!</span>(<span class="self">self</span>.<span class="ident">stone</span>.<span class="ident">is_none</span>());
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">split</span>(<span class="ident">tx</span>: <span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">FullCmd</span><span class="op">&gt;</span>) -&gt; (<span class="self">Self</span>, <span class="self">Self</span>) {
         (
             <span class="self">Self</span> {
-                <span class="ident">tx</span>: <span class="self">self</span>.<span class="ident">tx</span>.<span class="ident">clone</span>(),
-                <span class="ident">stone</span>: <span class="prelude-val">Some</span>(<span class="ident">Stone::Black</span>),
+                <span class="ident">tx</span>: <span class="ident">tx</span>.<span class="ident">clone</span>(),
+                <span class="ident">stone</span>: <span class="ident">Stone::Black</span>,
             },
             <span class="self">Self</span> {
-                <span class="ident">tx</span>: <span class="self">self</span>.<span class="ident">into_full</span>(),
-                <span class="ident">stone</span>: <span class="prelude-val">Some</span>(<span class="ident">Stone::White</span>),
+                <span class="ident">tx</span>,
+                <span class="ident">stone</span>: <span class="ident">Stone::White</span>,
             },
         )
     }
 
-    <span class="doccomment">/// Returns the stone of this sender, or `None` if this sender is anonymous.</span>
+    <span class="doccomment">/// Returns the stone of this sender.</span>
     <span class="attribute">#[<span class="ident">inline</span>]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">stone</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Stone</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">stone</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Stone</span> {
         <span class="self">self</span>.<span class="ident">stone</span>
     }
 
@@ -157,18 +127,16 @@
     <span class="kw">fn</span> <span class="ident">send</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">cmd</span>: <span class="ident">Cmd</span>) {
         <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">tx</span>.<span class="ident">send</span>(<span class="ident">FullCmd</span> {
             <span class="ident">cmd</span>,
-            <span class="ident">stone</span>: <span class="self">self</span>.<span class="ident">stone</span>,
+            <span class="ident">stone</span>: <span class="prelude-val">Some</span>(<span class="self">self</span>.<span class="ident">stone</span>),
         });
     }
 }
 
 <span class="kw">impl</span> <span class="ident">Drop</span> <span class="kw">for</span> <span class="ident">CmdSender</span> {
     <span class="kw">fn</span> <span class="ident">drop</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) {
-        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">stone</span>.<span class="ident">is_some</span>() {
-            <span class="self">self</span>.<span class="ident">send</span>(<span class="ident">Cmd::Disconnect</span>);
-        }
+        <span class="self">self</span>.<span class="ident">send</span>(<span class="ident">Cmd::Disconnect</span>);
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="connect6" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (28b891916 2022-05-29)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="connect6" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (c35035cef 2022-05-30)" ></div>
 </body></html>

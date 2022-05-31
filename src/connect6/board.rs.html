@@ -607,18 +607,6 @@
 <span id="600">600</span>
 <span id="601">601</span>
 <span id="602">602</span>
-<span id="603">603</span>
-<span id="604">604</span>
-<span id="605">605</span>
-<span id="606">606</span>
-<span id="607">607</span>
-<span id="608">608</span>
-<span id="609">609</span>
-<span id="610">610</span>
-<span id="611">611</span>
-<span id="612">612</span>
-<span id="613">613</span>
-<span id="614">614</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">alloc</span>::{<span class="self">self</span>, <span class="ident">Layout</span>},
     <span class="ident">fmt</span>, <span class="ident">mem</span>,
@@ -1040,38 +1028,26 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// This method assumes that the slot at the point is occupied by the given stone.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">check_win</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">p</span>: <span class="ident">Point</span>, <span class="ident">stone</span>: <span class="ident">Stone</span>) -&gt; <span class="ident">bool</span> {
-        <span class="self">self</span>.<span class="ident">row_len_any</span>(<span class="ident">p</span>, <span class="ident">stone</span>, <span class="op">|</span><span class="ident">l</span><span class="op">|</span> <span class="ident">l</span> <span class="op">&gt;</span><span class="op">=</span> <span class="number">6</span>)
+        <span class="self">self</span>.<span class="ident">count</span>(<span class="ident">p</span>, <span class="ident">stone</span>, <span class="ident">Axis::Vertical</span>) <span class="op">&gt;</span><span class="op">=</span> <span class="number">5</span>
+            <span class="op">|</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">count</span>(<span class="ident">p</span>, <span class="ident">stone</span>, <span class="ident">Axis::Ascending</span>) <span class="op">&gt;</span><span class="op">=</span> <span class="number">5</span>
+            <span class="op">|</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">count</span>(<span class="ident">p</span>, <span class="ident">stone</span>, <span class="ident">Axis::Horizontal</span>) <span class="op">&gt;</span><span class="op">=</span> <span class="number">5</span>
+            <span class="op">|</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">count</span>(<span class="ident">p</span>, <span class="ident">stone</span>, <span class="ident">Axis::Descending</span>) <span class="op">&gt;</span><span class="op">=</span> <span class="number">5</span>
     }
 
-    <span class="doccomment">/// Calculates the length of the row through a point on the given axis.</span>
-    <span class="kw">fn</span> <span class="ident">row_len</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">p</span>: <span class="ident">Point</span>, <span class="ident">stone</span>: <span class="ident">Stone</span>, <span class="ident">axis</span>: <span class="ident">Axis</span>) -&gt; <span class="ident">u32</span> {
-        <span class="kw">let</span> <span class="ident">count</span> <span class="op">=</span> <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">p</span>: <span class="ident">Point</span>, <span class="ident">forward</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">len</span> <span class="op">=</span> <span class="number">0</span>;
-            <span class="kw">loop</span> {
-                <span class="ident">p</span> <span class="op">=</span> <span class="ident">p</span>.<span class="ident">adjacent</span>(<span class="ident">axis</span>, <span class="ident">forward</span>);
-                <span class="kw">if</span> <span class="self">self</span>.<span class="ident">get</span>(<span class="ident">p</span>).<span class="ident">and_then</span>(<span class="ident">Slot::stone</span>) <span class="op">==</span> <span class="prelude-val">Some</span>(<span class="ident">stone</span>) {
-                    <span class="ident">len</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
-                } <span class="kw">else</span> {
-                    <span class="kw">break</span> <span class="ident">len</span>;
-                }
+    <span class="doccomment">/// Counts the length of the row through a point (excluded) on the given axis.</span>
+    <span class="kw">fn</span> <span class="ident">count</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">p</span>: <span class="ident">Point</span>, <span class="ident">stone</span>: <span class="ident">Stone</span>, <span class="ident">axis</span>: <span class="ident">Axis</span>) -&gt; <span class="ident">u32</span> {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">len</span> <span class="op">=</span> <span class="number">0</span>;
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">count_half</span> <span class="op">=</span> <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">p</span>: <span class="ident">Point</span>, <span class="ident">forward</span><span class="op">|</span> <span class="kw">loop</span> {
+            <span class="ident">p</span> <span class="op">=</span> <span class="ident">p</span>.<span class="ident">adjacent</span>(<span class="ident">axis</span>, <span class="ident">forward</span>);
+            <span class="kw">if</span> <span class="self">self</span>.<span class="ident">get</span>(<span class="ident">p</span>).<span class="ident">and_then</span>(<span class="ident">Slot::stone</span>) <span class="op">==</span> <span class="prelude-val">Some</span>(<span class="ident">stone</span>) {
+                <span class="ident">len</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
+            } <span class="kw">else</span> {
+                <span class="kw">return</span>;
             }
         };
-        <span class="ident">count</span>(<span class="ident">p</span>, <span class="bool-val">true</span>) <span class="op">+</span> <span class="ident">count</span>(<span class="ident">p</span>, <span class="bool-val">false</span>) <span class="op">+</span> <span class="number">1</span>
-    }
-
-    <span class="doccomment">/// Returns `true` if the length of any row through the point matches the predicate.</span>
-    <span class="kw">fn</span> <span class="ident">row_len_any</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">p</span>: <span class="ident">Point</span>, <span class="ident">stone</span>: <span class="ident">Stone</span>, <span class="ident">pred</span>: <span class="kw">impl</span> <span class="ident">Fn</span>(<span class="ident">u32</span>) -&gt; <span class="ident">bool</span>) -&gt; <span class="ident">bool</span> {
-        <span class="kw">for</span> <span class="ident">axis</span> <span class="kw">in</span> [
-            <span class="ident">Axis::Vertical</span>,
-            <span class="ident">Axis::Ascending</span>,
-            <span class="ident">Axis::Horizontal</span>,
-            <span class="ident">Axis::Descending</span>,
-        ] {
-            <span class="kw">if</span> <span class="ident">pred</span>(<span class="self">self</span>.<span class="ident">row_len</span>(<span class="ident">p</span>, <span class="ident">stone</span>, <span class="ident">axis</span>)) {
-                <span class="kw">return</span> <span class="bool-val">true</span>;
-            }
-        }
-        <span class="bool-val">false</span>
+        <span class="ident">count_half</span>(<span class="ident">p</span>, <span class="bool-val">true</span>);
+        <span class="ident">count_half</span>(<span class="ident">p</span>, <span class="bool-val">false</span>);
+        <span class="ident">len</span>
     }
 }
 
@@ -1234,5 +1210,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="connect6" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (28b891916 2022-05-29)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="connect6" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (c35035cef 2022-05-30)" ></div>
 </body></html>

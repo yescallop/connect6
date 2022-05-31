@@ -105,7 +105,7 @@
 <span class="attribute">#[<span class="ident">async_trait</span>]</span>
 <span class="kw">impl</span> <span class="ident">Player</span> <span class="kw">for</span> <span class="ident">Console</span> {
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">attach</span>(<span class="self">self</span>, <span class="kw-2">mut</span> <span class="ident">event_rx</span>: <span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">Event</span><span class="op">&gt;</span>, <span class="ident">cmd_tx</span>: <span class="ident">CmdSender</span>) {
-        <span class="kw">let</span> <span class="ident">stone</span> <span class="op">=</span> <span class="ident">cmd_tx</span>.<span class="ident">stone</span>().<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="ident">stone</span> <span class="op">=</span> <span class="ident">cmd_tx</span>.<span class="ident">stone</span>();
         <span class="kw">while</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">event</span>) <span class="op">=</span> <span class="ident">event_rx</span>.<span class="ident">recv</span>().<span class="kw">await</span> {
             <span class="kw">if</span> <span class="kw">let</span> <span class="ident">Event::Turn</span> <span class="op">|</span> <span class="ident">Event::Error</span>(<span class="kw">_</span>) <span class="op">=</span> <span class="ident">event</span> {
                 <span class="ident">cmd_tx</span>.<span class="ident">make_move</span>(<span class="ident">console::read_move</span>(<span class="ident">stone</span>).<span class="kw">await</span>);
@@ -160,5 +160,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="connect6" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (28b891916 2022-05-29)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="connect6" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (c35035cef 2022-05-30)" ></div>
 </body></html>
