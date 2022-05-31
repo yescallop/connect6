@@ -419,38 +419,26 @@ impl Board {
     ///
     /// This method assumes that the slot at the point is occupied by the given stone.
     pub fn check_win(&self, p: Point, stone: Stone) -> bool {
-        self.row_len_any(p, stone, |l| l >= 6)
+        self.count(p, stone, Axis::Vertical) >= 5
+            || self.count(p, stone, Axis::Ascending) >= 5
+            || self.count(p, stone, Axis::Horizontal) >= 5
+            || self.count(p, stone, Axis::Descending) >= 5
     }
 
-    /// Calculates the length of the row through a point on the given axis.
-    fn row_len(&self, p: Point, stone: Stone, axis: Axis) -> u32 {
-        let count = |mut p: Point, forward| {
-            let mut len = 0;
-            loop {
-                p = p.adjacent(axis, forward);
-                if self.get(p).and_then(Slot::stone) == Some(stone) {
-                    len += 1;
-                } else {
-                    break len;
-                }
+    /// Counts the length of the row through a point (excluded) on the given axis.
+    fn count(&self, p: Point, stone: Stone, axis: Axis) -> u32 {
+        let mut len = 0;
+        let mut count_half = |mut p: Point, forward| loop {
+            p = p.adjacent(axis, forward);
+            if self.get(p).and_then(Slot::stone) == Some(stone) {
+                len += 1;
+            } else {
+                return;
             }
         };
-        count(p, true) + count(p, false) + 1
-    }
-
-    /// Returns `true` if the length of any row through the point matches the predicate.
-    fn row_len_any(&self, p: Point, stone: Stone, pred: impl Fn(u32) -> bool) -> bool {
-        for axis in [
-            Axis::Vertical,
-            Axis::Ascending,
-            Axis::Horizontal,
-            Axis::Descending,
-        ] {
-            if pred(self.row_len(p, stone, axis)) {
-                return true;
-            }
-        }
-        false
+        count_half(p, true);
+        count_half(p, false);
+        len
     }
 }
 

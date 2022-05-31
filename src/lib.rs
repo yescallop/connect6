@@ -66,10 +66,7 @@ impl Builder {
         let (cmd_tx, cmd_rx) = mpsc::unbounded_channel();
         Handle {
             event_rx,
-            cmd_tx: CmdSender {
-                tx: cmd_tx,
-                stone: None,
-            },
+            cmd_tx,
             ctrl: Control::new(self, event_tx, cmd_rx),
         }
     }
@@ -87,7 +84,7 @@ pub struct Handle {
     /// The global event receiver.
     pub event_rx: Receiver<FullEvent>,
     /// The command sender.
-    pub cmd_tx: CmdSender,
+    pub cmd_tx: Sender<FullCmd>,
     /// The game control.
     pub ctrl: Box<Control>,
 }
@@ -96,7 +93,7 @@ impl Handle {
     /// Starts a game with the given players, logging the events in the console.
     pub async fn start(mut self, black: impl Player, white: impl Player) -> GameResult {
         let (black_rx, white_rx) = self.ctrl.subscribe();
-        let (black_tx, white_tx) = self.cmd_tx.split();
+        let (black_tx, white_tx) = CmdSender::split(self.cmd_tx);
         tokio::join!(
             self.ctrl.start(),
             console::log(self.event_rx),
@@ -109,7 +106,7 @@ impl Handle {
     /// Starts a game with the given players silently.
     pub async fn start_silent(mut self, black: impl Player, white: impl Player) -> GameResult {
         let (black_rx, white_rx) = self.ctrl.subscribe();
-        let (black_tx, white_tx) = self.cmd_tx.split();
+        let (black_tx, white_tx) = CmdSender::split(self.cmd_tx);
         tokio::join!(
             self.ctrl.start(),
             black.attach(black_rx, black_tx),

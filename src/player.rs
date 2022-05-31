@@ -21,7 +21,7 @@ pub struct Console;
 #[async_trait]
 impl Player for Console {
     async fn attach(self, mut event_rx: Receiver<Event>, cmd_tx: CmdSender) {
-        let stone = cmd_tx.stone().unwrap();
+        let stone = cmd_tx.stone();
         while let Some(event) = event_rx.recv().await {
             if let Event::Turn | Event::Error(_) = event {
                 cmd_tx.make_move(console::read_move(stone).await);

@@ -1,55 +1,41 @@
 #[doc(no_inline)]
 pub use tokio::sync::mpsc::{UnboundedReceiver as Receiver, UnboundedSender as Sender};
 
-use std::{mem::ManuallyDrop, ptr};
-
 use crate::{
     board::{Point, Stone},
     message::{Cmd, FullCmd},
 };
 
-/// A command sender.
+/// A stone-specific command sender.
 ///
 /// Drop the sender to disconnect from the game.
 pub struct CmdSender {
     pub(super) tx: Sender<FullCmd>,
-    pub(super) stone: Option<Stone>,
+    pub(super) stone: Stone,
 }
 
 impl CmdSender {
-    /// Consumes this `CmdSender` and returns the underlying full command sender.
+    /// Splits a full command sender into stone-specific (Black, White) senders.
     ///
     /// # Panics
     ///
     /// Panics if this sender is not anonymous.
-    pub fn into_full(self) -> Sender<FullCmd> {
-        assert!(self.stone.is_none());
-        let me = ManuallyDrop::new(self);
-        unsafe { ptr::read(&me.tx) }
-    }
-
-    /// Splits this anonymous sender into stone-specific (Black, White) senders.
-    ///
-    /// # Panics
-    ///
-    /// Panics if this sender is not anonymous.
-    pub fn split(self) -> (Self, Self) {
-        assert!(self.stone.is_none());
+    pub fn split(tx: Sender<FullCmd>) -> (Self, Self) {
         (
             Self {
-                tx: self.tx.clone(),
-                stone: Some(Stone::Black),
+                tx: tx.clone(),
+                stone: Stone::Black,
             },
             Self {
-                tx: self.into_full(),
-                stone: Some(Stone::White),
+                tx,
+                stone: Stone::White,
             },
         )
     }
 
-    /// Returns the stone of this sender, or `None` if this sender is anonymous.
+    /// Returns the stone of this sender.
     #[inline]
-    pub fn stone(&self) -> Option<Stone> {
+    pub fn stone(&self) -> Stone {
         self.stone
     }
 
@@ -68,15 +54,13 @@ impl CmdSender {
     fn send(&self, cmd: Cmd) {
         let _ = self.tx.send(FullCmd {
             cmd,
-            stone: self.stone,
+            stone: Some(self.stone),
         });
     }
 }
 
 impl Drop for CmdSender {
     fn drop(&mut self) {
-        if self.stone.is_some() {
-            self.send(Cmd::Disconnect);
-        }
+        self.send(Cmd::Disconnect);
     }
 }

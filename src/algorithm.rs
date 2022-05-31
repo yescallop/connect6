@@ -163,7 +163,7 @@ impl BitBoard {
         #[inline]
         unsafe fn set_and_get(row: &mut [u32], i: u32) -> u32 {
             let slot = row.get_unchecked_mut(i as usize);
-            let v = *slot |  (1 << i);
+            let v = *slot | (1 << i);
             *slot = v;
             v
         }
