@@ -403,7 +403,7 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Handle</span> {
     <span class="doccomment">/// The global event receiver.</span>
     <span class="kw">pub</span> <span class="ident">event_rx</span>: <span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">FullEvent</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// The command sender.</span>
+    <span class="doccomment">/// The full command sender.</span>
     <span class="kw">pub</span> <span class="ident">cmd_tx</span>: <span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">FullCmd</span><span class="op">&gt;</span>,
     <span class="doccomment">/// The game control.</span>
     <span class="kw">pub</span> <span class="ident">ctrl</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">Control</span><span class="op">&gt;</span>,

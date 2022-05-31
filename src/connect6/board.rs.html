@@ -606,7 +606,6 @@
 <span id="599">599</span>
 <span id="600">600</span>
 <span id="601">601</span>
-<span id="602">602</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">alloc</span>::{<span class="self">self</span>, <span class="ident">Layout</span>},
     <span class="ident">fmt</span>, <span class="ident">mem</span>,
@@ -879,8 +878,7 @@
 }
 
 <span class="doccomment">/// A square matrix.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Copy</span>, <span class="ident">Clone</span>)]</span>
-<span class="attribute">#[<span class="ident">repr</span>(<span class="ident">transparent</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Copy</span>, <span class="ident">Clone</span>)]</span>
 <span class="kw">struct</span> <span class="ident">SqrMat</span> {
     <span class="ident">ptr</span>: <span class="ident">NonNull</span><span class="op">&lt;</span><span class="ident">Slot</span><span class="op">&gt;</span>,
 }
