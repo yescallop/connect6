@@ -1,4 +1,4 @@
-#![warn(rust_2018_idioms, unreachable_pub, missing_docs)]
+#![warn(rust_2018_idioms, missing_docs)]
 
 //! A library for hosting [Connect6] games asynchronously.
 //!
