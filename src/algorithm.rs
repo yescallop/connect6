@@ -1,6 +1,6 @@
 use std::{
     alloc::{self, Layout},
-    cmp, fmt, iter, mem,
+    cmp, fmt, mem,
     time::{Duration, Instant},
 };
 
@@ -229,31 +229,27 @@ impl BitBoard {
 }
 
 /// A state for Monte-Carlo tree search (MCTS).
-///
-/// The constant parameter `T` stands for the number of
-/// random games generated for each feasible move.
 #[derive(Debug)]
-pub struct MctsState<const T: u64> {
-    root: Node,
+pub struct MctsState {
+    root: Box<Node>,
     board: Box<BitBoard>,
     sim_board: Box<BitBoard>,
     path: Vec<*mut Node>,
     index: u32,
 }
 
-struct Leaf<'a, const T: u64> {
+struct Leaf<'a> {
     node: &'a mut Node,
-    board: &'a BitBoard,
+    board: &'a mut BitBoard,
     sim_board: &'a mut BitBoard,
     index: u32,
-    expand: bool,
 }
 
 struct Node {
     point: Point,
     wins: u64,
     sims: u64,
-    terminal: bool,
+    sure_win: bool,
     unvisited: Vec<Point>,
     visited: u32,
     children: BinaryHeap<Node>,
@@ -279,7 +275,7 @@ fn stone(index: u32) -> Stone {
     }
 }
 
-impl<const T: u64> MctsState<T> {
+impl MctsState {
     /// Creates a new `MctsState`.
     pub fn new() -> Self {
         let size = SIZE as u32;
@@ -293,70 +289,84 @@ impl<const T: u64> MctsState<T> {
             .collect();
         unvisited.swap_remove(unvisited.len() / 2);
 
+        let mut root = Box::new(Node {
+            point: center,
+            wins: 0,
+            sims: 0,
+            sure_win: false,
+            children: BinaryHeap::with_capacity(unvisited.len()),
+            unvisited,
+            visited: 0,
+        });
+
         MctsState {
-            root: Node {
-                point: center,
-                wins: 0,
-                sims: 0,
-                terminal: false,
-                children: BinaryHeap::with_capacity(unvisited.len()),
-                unvisited,
-                visited: 0,
-            },
+            path: vec![&mut *root],
+            root,
             board,
             sim_board: BitBoard::new(),
-            path: Vec::new(),
             index: 1,
         }
     }
 
     /// Returns `true` if the terminal is reached.
     pub fn is_terminal(&self) -> bool {
-        self.root.terminal
+        self.root.is_terminal()
     }
 
     /// Searches for the best moves within a certain amount of time.
-    pub fn search<R>(&mut self, rng: &mut R, timeout: Duration)
+    pub fn search<R>(&mut self, rng: &mut R, rounds: u64, timeout: Duration)
     where
         R: Rng + ?Sized,
     {
         let deadline = Instant::now() + timeout;
         while Instant::now() < deadline {
-            let leaf = self.traverse();
-            let expand = leaf.expand;
-            let wins = leaf.simulate(rng);
-            self.back_propagate(wins, expand);
+            let (leaf, expand) = self.traverse();
+            leaf.simulate(rng, rounds);
+            self.back_propagate(expand);
         }
     }
 
     /// Returns the currently best pair of moves, without affecting the state.
     pub fn peek_pair(&self) -> (Point, Point) {
-        let first = self.root.peek();
-        let second = first.peek();
-        (first.point, second.point)
+        let first = self.root.peek().expect("no children for terminal");
+        let second = match first.peek() {
+            Some(node) => node.point,
+            None => first.unvisited[0],
+        };
+        (first.point, second)
     }
 
     /// Returns the currently best pair of moves, advancing the state by two moves.
     pub fn pop_pair(&mut self) -> (Point, Point) {
-        let first = self.root.peek_mut();
-        let second = first.pop();
-        let pair = (first.point, second.point);
+        *self.root = self.root.pop().expect("no children for terminal");
+        self.index += 1;
+        let first = self.root.point;
 
-        self.root = second;
-        self.index += 2;
+        let second = match self.root.pop() {
+            Some(node) => {
+                *self.root = node;
+                self.index += 1;
+                self.root.point
+            }
+            None => self.root.unvisited[0],
+        };
+
         let stone = stone(self.index);
         unsafe {
-            self.board.set(pair.0, stone);
-            self.board.set(pair.1, stone);
+            self.board.set(first, stone);
+            self.board.set(second, stone);
         }
-
-        pair
+        (first, second)
     }
 
-    fn traverse(&mut self) -> Leaf<'_, T> {
-        let mut node = &mut self.root;
+    fn traverse(&mut self) -> (Leaf<'_>, bool) {
+        let mut node = &mut *self.root;
 
         while node.unvisited.len() as u32 == node.visited {
+            if node.children.is_empty() {
+                break;
+            }
+
             node = node.children.peek_mut().unwrap();
             self.path.push(node);
 
@@ -364,84 +374,78 @@ impl<const T: u64> MctsState<T> {
             unsafe { self.board.set(node.point, stone(self.index)) }
         }
 
-        let expand = !node.terminal;
+        let expand = !node.is_terminal();
         if expand {
             node = node.expand();
             self.path.push(node);
 
             self.index += 1;
-            node.terminal = unsafe { self.board.set_and_check_win(node.point, stone(self.index)) };
+            node.sure_win = unsafe { self.board.set_and_check_win(node.point, stone(self.index)) };
         }
 
-        Leaf {
+        let leaf = Leaf {
             node,
-            board: &self.board,
+            board: &mut self.board,
             sim_board: &mut self.sim_board,
             index: self.index,
-            expand,
-        }
+        };
+        (leaf, expand)
     }
 
-    fn back_propagate(&mut self, mut wins: u64, expand: bool) {
-        let nodes = self.path.iter().rev().copied();
-        let parents = nodes
-            .clone()
-            .skip(1)
-            .chain(iter::once(&mut self.root as *mut _));
-        let mut back_path = nodes.zip(parents);
-        let mut index = self.index;
+    fn back_propagate(&mut self, mut expand: bool) {
+        let (&node, path) = self.path.split_last().unwrap();
+        let mut node = unsafe { &mut *node };
 
-        let first = back_path.next().unwrap();
-        unsafe {
-            let node = &mut *first.0;
-            node.wins += wins;
-            node.sims += T;
-            self.board.remove(node.point, stone(index));
+        let &mut Node { mut wins, sims, .. } = node;
 
-            let parent = &mut *first.1;
-            if expand {
-                parent.children.sift_up_last();
-            } else {
-                parent.children.sift_down_first();
+        unsafe { self.board.remove(node.point, stone(self.index)) }
+
+        for node_i in (0..path.len()).rev() {
+            if self.index & 1 == 0 {
+                wins = sims - wins;
             }
-        }
-
-        for it in back_path {
-            if index & 1 == 0 {
-                wins = T - wins;
-            }
-            index -= 1;
+            self.index -= 1;
 
             unsafe {
-                let node = &mut *it.0;
+                node = &mut *path[node_i];
                 node.wins += wins;
-                node.sims += T;
-                self.board.remove(node.point, stone(index));
+                node.sims += sims;
 
-                let parent = &mut *it.1;
-                parent.children.sift_down_first();
+                if expand {
+                    node.children.sift_up_last();
+                    expand = false;
+                } else {
+                    node.children.sift_down_first();
+                }
+            }
+
+            if node_i != 0 {
+                // Don't remove the stone for the root.
+                unsafe { self.board.remove(node.point, stone(self.index)) }
             }
         }
 
-        self.path.clear();
-        self.index = index - 1;
+        self.path.truncate(1);
     }
 }
 
-impl<'a, const T: u64> Leaf<'a, T> {
-    fn simulate<R>(self, rng: &mut R) -> u64
+impl<'a> Leaf<'a> {
+    fn simulate<R>(self, rng: &mut R, rounds: u64)
     where
         R: Rng + ?Sized,
     {
-        if self.node.terminal {
-            return T;
+        self.node.sims = rounds;
+        if self.node.sure_win {
+            self.node.wins = rounds;
+            return;
         }
 
         let uv = &mut self.node.unvisited[..];
         let len = uv.len() as u32;
         let mut wins = 0;
+        let mut draws = 0;
 
-        for _ in 0..T {
+        'outer: for _ in 0..rounds {
             self.sim_board.clone_from(self.board);
             let mut index = self.index;
 
@@ -452,15 +456,15 @@ impl<'a, const T: u64> Leaf<'a, T> {
 
                 index += 1;
                 if unsafe { self.sim_board.set_and_check_win(rand, stone(index)) } {
-                    break;
+                    if stone(index) == stone(self.index) {
+                        wins += 1;
+                    }
+                    continue 'outer;
                 }
             }
-
-            if stone(index) == stone(self.index) {
-                wins += 1;
-            }
+            draws += 1;
         }
-        wins
+        self.node.wins = wins + draws / 2;
     }
 }
 
@@ -480,7 +484,7 @@ impl Node {
             point,
             wins: 0,
             sims: 0,
-            terminal: false,
+            sure_win: false,
             children: BinaryHeap::new(),
             unvisited,
             visited: 0,
@@ -489,28 +493,24 @@ impl Node {
         self.children.push(child)
     }
 
-    fn peek(&self) -> &Node {
-        self.children
-            .iter()
-            .max_by(|a, b| a.sims.cmp(&b.sims))
-            .unwrap()
+    fn is_terminal(&self) -> bool {
+        self.sure_win || self.unvisited.is_empty()
     }
 
-    fn peek_mut(&mut self) -> &mut Node {
-        self.children
-            .iter_mut()
-            .max_by(|a, b| a.sims.cmp(&b.sims))
-            .unwrap()
+    fn peek(&self) -> Option<&Node> {
+        self.children.iter().max_by(|a, b| a.sims.cmp(&b.sims))
     }
 
-    fn pop(&mut self) -> Node {
-        let (i, _) = self
+    fn pop(&mut self) -> Option<Node> {
+        let opt = self
             .children
             .iter()
             .enumerate()
-            .max_by(|(_, a), (_, b)| a.sims.cmp(&b.sims))
-            .unwrap();
-        self.children.swap_remove(i)
+            .max_by(|(_, a), (_, b)| a.sims.cmp(&b.sims));
+        match opt {
+            Some((i, _)) => Some(self.children.swap_remove(i)),
+            None => None,
+        }
     }
 }
 
