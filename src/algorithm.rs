@@ -327,7 +327,7 @@ impl MctsState {
     }
 
     /// Returns the currently best pair of moves, without affecting the state.
-    pub fn peek_pair(&self) -> (Point, Point) {
+    pub fn peek(&self) -> (Point, Point) {
         let first = self.root.peek().expect("no children for terminal");
         let second = match first.peek() {
             Some(node) => node.point,
@@ -337,7 +337,7 @@ impl MctsState {
     }
 
     /// Returns the currently best pair of moves, advancing the state by two moves.
-    pub fn pop_pair(&mut self) -> (Point, Point) {
+    pub fn pop(&mut self) -> (Point, Point) {
         *self.root = self.root.pop().expect("no children for terminal");
         self.index += 1;
         let first = self.root.point;
@@ -357,6 +357,44 @@ impl MctsState {
             self.board.set(second, stone);
         }
         (first, second)
+    }
+
+    /// Advances through the given pair of moves, if any.
+    pub fn advance(&mut self, mov: Option<(Point, Point)>) {
+        self.index += 2;
+        let mov = match mov {
+            Some(mov) => mov,
+            None => {
+                self.root.wins = 0;
+                self.root.sims = 0;
+                self.root.visited = 0;
+                self.root.children.clear();
+                return;
+            }
+        };
+
+        let stone = stone(self.index);
+        let sure_win = unsafe {
+            self.board.set_and_check_win(mov.0, stone) | self.board.set_and_check_win(mov.1, stone)
+        };
+
+        let unvisited: Vec<_> = self
+            .root
+            .unvisited
+            .iter()
+            .copied()
+            .filter(|&p| p != mov.0 && p != mov.1)
+            .collect();
+
+        *self.root = Node {
+            point: mov.1,
+            wins: 0,
+            sims: 0,
+            sure_win,
+            children: BinaryHeap::with_capacity(unvisited.len()),
+            unvisited,
+            visited: 0,
+        };
     }
 
     fn traverse(&mut self) -> (Leaf<'_>, bool) {
@@ -428,6 +466,9 @@ impl MctsState {
         self.path.truncate(1);
     }
 }
+
+unsafe impl Send for MctsState {}
+unsafe impl Sync for MctsState {}
 
 impl<'a> Leaf<'a> {
     fn simulate<R>(self, rng: &mut R, rounds: u64)

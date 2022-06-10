@@ -1,12 +1,19 @@
-use std::collections::HashSet;
+use std::{
+    collections::HashSet,
+    sync::{Arc, Mutex},
+    time::Duration,
+};
 
 use crate::{
+    algorithm::MctsState,
     board::Point,
     channel::{CmdSender, Receiver},
     console,
     message::Event,
 };
 use async_trait::async_trait;
+use rand::prelude::*;
+use tokio::task;
 
 /// A trait for Connect6 players.
 #[async_trait]
@@ -69,6 +76,45 @@ impl Player for Chaos {
                 }
                 Event::Move(Some(mov)) => {
                     assert!(queue.remove(&mov.0) && queue.remove(&mov.1));
+                }
+                _ => (),
+            }
+        }
+    }
+}
+
+const ROUNDS: u64 = 1024;
+const TIMEOUT: Duration = Duration::from_secs(20);
+
+/// A player that uses Monte-Carlo tree search.
+pub struct Mcts;
+
+#[async_trait]
+impl Player for Mcts {
+    async fn attach(self, mut event_rx: Receiver<Event>, cmd_tx: CmdSender) {
+        let state = Arc::new(Mutex::new(MctsState::new()));
+
+        while let Some(event) = event_rx.recv().await {
+            match event {
+                Event::Turn => {
+                    let state = state.clone();
+                    let mov = task::spawn_blocking(move || {
+                        let mut state = state.lock().unwrap();
+                        let mut rng = SmallRng::from_entropy();
+
+                        state.search(&mut rng, ROUNDS, TIMEOUT);
+                        let pair = state.peek();
+                        println!("Tentative: ({}, {})", pair.0, pair.1);
+
+                        state.search(&mut rng, ROUNDS, TIMEOUT);
+                        state.peek()
+                    })
+                    .await
+                    .unwrap();
+                    cmd_tx.make_move(Some(mov));
+                }
+                Event::Move(mov) => {
+                    state.lock().unwrap().advance(mov);
                 }
                 _ => (),
             }

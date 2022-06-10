@@ -10,7 +10,7 @@ use rand::prelude::*;
 use tokio::task;
 
 const ROUNDS: u64 = 1024;
-const TIMEOUT: Duration = Duration::from_secs(15);
+const TIMEOUT: Duration = Duration::from_secs(20);
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
@@ -25,12 +25,12 @@ async fn main() {
 
         while !state.is_terminal() {
             state.search(&mut rng, ROUNDS, TIMEOUT);
-            let pair = state.peek_pair();
+            let pair = state.peek();
             println!("Tentative: ({}, {})", pair.0, pair.1);
 
             state.search(&mut rng, ROUNDS, TIMEOUT);
             let cmd = FullCmd {
-                cmd: Cmd::Move(Some(state.pop_pair())),
+                cmd: Cmd::Move(Some(state.pop())),
                 stone: None,
             };
 
