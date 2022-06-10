@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["Chaos","A player that makes totally randomized moves."],["Console","A player that inputs moves from the console."],["Void","A player that passes on every move."]],"trait":[["Player","A trait for Connect6 players."]]});
+initSidebarItems({"struct":[["Chaos","A player that makes totally randomized moves."],["Console","A player that inputs moves from the console."],["Mcts","A player that uses Monte-Carlo tree search."],["Void","A player that passes on every move."]],"trait":[["Player","A trait for Connect6 players."]]});

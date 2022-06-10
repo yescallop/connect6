@@ -82,15 +82,68 @@
 <span id="75">75</span>
 <span id="76">76</span>
 <span id="77">77</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std::collections::HashSet</span>;
+<span id="78">78</span>
+<span id="79">79</span>
+<span id="80">80</span>
+<span id="81">81</span>
+<span id="82">82</span>
+<span id="83">83</span>
+<span id="84">84</span>
+<span id="85">85</span>
+<span id="86">86</span>
+<span id="87">87</span>
+<span id="88">88</span>
+<span id="89">89</span>
+<span id="90">90</span>
+<span id="91">91</span>
+<span id="92">92</span>
+<span id="93">93</span>
+<span id="94">94</span>
+<span id="95">95</span>
+<span id="96">96</span>
+<span id="97">97</span>
+<span id="98">98</span>
+<span id="99">99</span>
+<span id="100">100</span>
+<span id="101">101</span>
+<span id="102">102</span>
+<span id="103">103</span>
+<span id="104">104</span>
+<span id="105">105</span>
+<span id="106">106</span>
+<span id="107">107</span>
+<span id="108">108</span>
+<span id="109">109</span>
+<span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
+<span id="118">118</span>
+<span id="119">119</span>
+<span id="120">120</span>
+<span id="121">121</span>
+<span id="122">122</span>
+<span id="123">123</span>
+</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std</span>::{
+    <span class="ident">collections::HashSet</span>,
+    <span class="ident">sync</span>::{<span class="ident">Arc</span>, <span class="ident">Mutex</span>},
+    <span class="ident">time::Duration</span>,
+};
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
+    <span class="ident">algorithm::MctsState</span>,
     <span class="ident">board::Point</span>,
     <span class="ident">channel</span>::{<span class="ident">CmdSender</span>, <span class="ident">Receiver</span>},
     <span class="ident">console</span>,
     <span class="ident">message::Event</span>,
 };
 <span class="kw">use</span> <span class="ident">async_trait::async_trait</span>;
+<span class="kw">use</span> <span class="ident">rand::prelude</span>::<span class="kw-2">*</span>;
+<span class="kw">use</span> <span class="ident">tokio::task</span>;
 
 <span class="doccomment">/// A trait for Connect6 players.</span>
 <span class="attribute">#[<span class="ident">async_trait</span>]</span>
@@ -159,6 +212,45 @@
         }
     }
 }
+
+<span class="kw">const</span> <span class="ident">ROUNDS</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">1024</span>;
+<span class="kw">const</span> <span class="ident">TIMEOUT</span>: <span class="ident">Duration</span> <span class="op">=</span> <span class="ident">Duration::from_secs</span>(<span class="number">20</span>);
+
+<span class="doccomment">/// A player that uses Monte-Carlo tree search.</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Mcts</span>;
+
+<span class="attribute">#[<span class="ident">async_trait</span>]</span>
+<span class="kw">impl</span> <span class="ident">Player</span> <span class="kw">for</span> <span class="ident">Mcts</span> {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">attach</span>(<span class="self">self</span>, <span class="kw-2">mut</span> <span class="ident">event_rx</span>: <span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">Event</span><span class="op">&gt;</span>, <span class="ident">cmd_tx</span>: <span class="ident">CmdSender</span>) {
+        <span class="kw">let</span> <span class="ident">state</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">Mutex::new</span>(<span class="ident">MctsState::new</span>()));
+
+        <span class="kw">while</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">event</span>) <span class="op">=</span> <span class="ident">event_rx</span>.<span class="ident">recv</span>().<span class="kw">await</span> {
+            <span class="kw">match</span> <span class="ident">event</span> {
+                <span class="ident">Event::Turn</span> =&gt; {
+                    <span class="kw">let</span> <span class="ident">state</span> <span class="op">=</span> <span class="ident">state</span>.<span class="ident">clone</span>();
+                    <span class="kw">let</span> <span class="ident">mov</span> <span class="op">=</span> <span class="ident">task::spawn_blocking</span>(<span class="kw">move</span> <span class="op">|</span><span class="op">|</span> {
+                        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">state</span> <span class="op">=</span> <span class="ident">state</span>.<span class="ident">lock</span>().<span class="ident">unwrap</span>();
+                        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rng</span> <span class="op">=</span> <span class="ident">SmallRng::from_entropy</span>();
+
+                        <span class="ident">state</span>.<span class="ident">search</span>(<span class="kw-2">&amp;mut</span> <span class="ident">rng</span>, <span class="ident">ROUNDS</span>, <span class="ident">TIMEOUT</span>);
+                        <span class="kw">let</span> <span class="ident">pair</span> <span class="op">=</span> <span class="ident">state</span>.<span class="ident">peek</span>();
+                        <span class="macro">println!</span>(<span class="string">&quot;Tentative: ({}, {})&quot;</span>, <span class="ident">pair</span>.<span class="number">0</span>, <span class="ident">pair</span>.<span class="number">1</span>);
+
+                        <span class="ident">state</span>.<span class="ident">search</span>(<span class="kw-2">&amp;mut</span> <span class="ident">rng</span>, <span class="ident">ROUNDS</span>, <span class="ident">TIMEOUT</span>);
+                        <span class="ident">state</span>.<span class="ident">peek</span>()
+                    })
+                    .<span class="kw">await</span>
+                    .<span class="ident">unwrap</span>();
+                    <span class="ident">cmd_tx</span>.<span class="ident">make_move</span>(<span class="prelude-val">Some</span>(<span class="ident">mov</span>));
+                }
+                <span class="ident">Event::Move</span>(<span class="ident">mov</span>) =&gt; {
+                    <span class="ident">state</span>.<span class="ident">lock</span>().<span class="ident">unwrap</span>().<span class="ident">advance</span>(<span class="ident">mov</span>);
+                }
+                <span class="kw">_</span> =&gt; (),
+            }
+        }
+    }
+}
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="connect6" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (7466d5492 2022-06-08)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="connect6" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (420c970cb 2022-06-09)" ></div>
 </body></html>
