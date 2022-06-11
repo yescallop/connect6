@@ -582,8 +582,6 @@
 <span id="575">575</span>
 <span id="576">576</span>
 <span id="577">577</span>
-<span id="578">578</span>
-<span id="579">579</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">alloc</span>::{<span class="self">self</span>, <span class="ident">Layout</span>},
     <span class="ident">cmp</span>, <span class="ident">fmt</span>, <span class="ident">mem</span>,
@@ -907,8 +905,8 @@
         <span class="kw">let</span> <span class="ident">deadline</span> <span class="op">=</span> <span class="ident">Instant::now</span>() <span class="op">+</span> <span class="ident">timeout</span>;
         <span class="kw">while</span> <span class="ident">Instant::now</span>() <span class="op">&lt;</span> <span class="ident">deadline</span> {
             <span class="kw">let</span> (<span class="ident">leaf</span>, <span class="ident">expand</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">traverse</span>();
-            <span class="ident">leaf</span>.<span class="ident">simulate</span>(<span class="ident">rng</span>, <span class="ident">rounds</span>);
-            <span class="self">self</span>.<span class="ident">back_propagate</span>(<span class="ident">expand</span>);
+            <span class="kw">let</span> <span class="ident">wins</span> <span class="op">=</span> <span class="ident">leaf</span>.<span class="ident">simulate</span>(<span class="ident">rng</span>, <span class="ident">rounds</span>);
+            <span class="self">self</span>.<span class="ident">back_propagate</span>(<span class="ident">expand</span>, <span class="ident">rounds</span>, <span class="ident">wins</span>);
         }
     }
 
@@ -1016,24 +1014,24 @@
         (<span class="ident">leaf</span>, <span class="ident">expand</span>)
     }
 
-    <span class="kw">fn</span> <span class="ident">back_propagate</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="kw-2">mut</span> <span class="ident">expand</span>: <span class="ident">bool</span>) {
+    <span class="kw">fn</span> <span class="ident">back_propagate</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="kw-2">mut</span> <span class="ident">expand</span>: <span class="ident">bool</span>, <span class="ident">rounds</span>: <span class="ident">u64</span>, <span class="kw-2">mut</span> <span class="ident">wins</span>: <span class="ident">u64</span>) {
         <span class="kw">let</span> (<span class="kw-2">&amp;</span><span class="ident">node</span>, <span class="ident">path</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">path</span>.<span class="ident">split_last</span>().<span class="ident">unwrap</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">node</span> <span class="op">=</span> <span class="kw">unsafe</span> { <span class="kw-2">&amp;mut</span> <span class="kw-2">*</span><span class="ident">node</span> };
 
-        <span class="kw">let</span> <span class="kw-2">&amp;mut</span> <span class="ident">Node</span> { <span class="kw-2">mut</span> <span class="ident">wins</span>, <span class="ident">sims</span>, .. } <span class="op">=</span> <span class="ident">node</span>;
-
+        <span class="ident">node</span>.<span class="ident">wins</span> <span class="op">+</span><span class="op">=</span> <span class="ident">wins</span>;
+        <span class="ident">node</span>.<span class="ident">sims</span> <span class="op">+</span><span class="op">=</span> <span class="ident">rounds</span>;
         <span class="kw">unsafe</span> { <span class="self">self</span>.<span class="ident">board</span>.<span class="ident">remove</span>(<span class="ident">node</span>.<span class="ident">point</span>, <span class="ident">stone</span>(<span class="self">self</span>.<span class="ident">index</span>)) }
 
         <span class="kw">for</span> <span class="ident">node_i</span> <span class="kw">in</span> (<span class="number">0</span>..<span class="ident">path</span>.<span class="ident">len</span>()).<span class="ident">rev</span>() {
             <span class="kw">if</span> <span class="self">self</span>.<span class="ident">index</span> <span class="op">&amp;</span> <span class="number">1</span> <span class="op">==</span> <span class="number">0</span> {
-                <span class="ident">wins</span> <span class="op">=</span> <span class="ident">sims</span> <span class="op">-</span> <span class="ident">wins</span>;
+                <span class="ident">wins</span> <span class="op">=</span> <span class="ident">rounds</span> <span class="op">-</span> <span class="ident">wins</span>;
             }
             <span class="self">self</span>.<span class="ident">index</span> <span class="op">-</span><span class="op">=</span> <span class="number">1</span>;
 
             <span class="kw">unsafe</span> {
                 <span class="ident">node</span> <span class="op">=</span> <span class="kw-2">&amp;mut</span> <span class="kw-2">*</span><span class="ident">path</span>[<span class="ident">node_i</span>];
                 <span class="ident">node</span>.<span class="ident">wins</span> <span class="op">+</span><span class="op">=</span> <span class="ident">wins</span>;
-                <span class="ident">node</span>.<span class="ident">sims</span> <span class="op">+</span><span class="op">=</span> <span class="ident">sims</span>;
+                <span class="ident">node</span>.<span class="ident">sims</span> <span class="op">+</span><span class="op">=</span> <span class="ident">rounds</span>;
 
                 <span class="kw">if</span> <span class="ident">expand</span> {
                     <span class="ident">node</span>.<span class="ident">children</span>.<span class="ident">sift_up_last</span>();
@@ -1057,14 +1055,12 @@
 <span class="kw">unsafe</span> <span class="kw">impl</span> <span class="ident">Sync</span> <span class="kw">for</span> <span class="ident">MctsState</span> {}
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">Leaf</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">simulate</span><span class="op">&lt;</span><span class="ident">R</span><span class="op">&gt;</span>(<span class="self">self</span>, <span class="ident">rng</span>: <span class="kw-2">&amp;mut</span> <span class="ident">R</span>, <span class="ident">rounds</span>: <span class="ident">u64</span>)
+    <span class="kw">fn</span> <span class="ident">simulate</span><span class="op">&lt;</span><span class="ident">R</span><span class="op">&gt;</span>(<span class="self">self</span>, <span class="ident">rng</span>: <span class="kw-2">&amp;mut</span> <span class="ident">R</span>, <span class="ident">rounds</span>: <span class="ident">u64</span>) -&gt; <span class="ident">u64</span>
     <span class="kw">where</span>
         <span class="ident">R</span>: <span class="ident">Rng</span> <span class="op">+</span> <span class="question-mark">?</span><span class="ident">Sized</span>,
     {
-        <span class="self">self</span>.<span class="ident">node</span>.<span class="ident">sims</span> <span class="op">=</span> <span class="ident">rounds</span>;
         <span class="kw">if</span> <span class="self">self</span>.<span class="ident">node</span>.<span class="ident">sure_win</span> {
-            <span class="self">self</span>.<span class="ident">node</span>.<span class="ident">wins</span> <span class="op">=</span> <span class="ident">rounds</span>;
-            <span class="kw">return</span>;
+            <span class="kw">return</span> <span class="ident">rounds</span>;
         }
 
         <span class="kw">let</span> <span class="ident">uv</span> <span class="op">=</span> <span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">node</span>.<span class="ident">unvisited</span>[..];
@@ -1091,7 +1087,7 @@
             }
             <span class="ident">draws</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
         }
-        <span class="self">self</span>.<span class="ident">node</span>.<span class="ident">wins</span> <span class="op">=</span> <span class="ident">wins</span> <span class="op">+</span> <span class="ident">draws</span> <span class="op">/</span> <span class="number">2</span>;
+        <span class="ident">wins</span> <span class="op">+</span> <span class="ident">draws</span> <span class="op">/</span> <span class="number">2</span>
     }
 }
 
@@ -1164,5 +1160,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="connect6" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (420c970cb 2022-06-09)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="connect6" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (ec55c6130 2022-06-10)" ></div>
 </body></html>

@@ -128,6 +128,19 @@
 <span id="121">121</span>
 <span id="122">122</span>
 <span id="123">123</span>
+<span id="124">124</span>
+<span id="125">125</span>
+<span id="126">126</span>
+<span id="127">127</span>
+<span id="128">128</span>
+<span id="129">129</span>
+<span id="130">130</span>
+<span id="131">131</span>
+<span id="132">132</span>
+<span id="133">133</span>
+<span id="134">134</span>
+<span id="135">135</span>
+<span id="136">136</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">collections::HashSet</span>,
     <span class="ident">sync</span>::{<span class="ident">Arc</span>, <span class="ident">Mutex</span>},
@@ -213,15 +226,23 @@
     }
 }
 
-<span class="kw">const</span> <span class="ident">ROUNDS</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">1024</span>;
-<span class="kw">const</span> <span class="ident">TIMEOUT</span>: <span class="ident">Duration</span> <span class="op">=</span> <span class="ident">Duration::from_secs</span>(<span class="number">20</span>);
-
 <span class="doccomment">/// A player that uses Monte-Carlo tree search.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Mcts</span>;
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Mcts</span> {
+    <span class="ident">rounds</span>: <span class="ident">u64</span>,
+    <span class="ident">timeout</span>: <span class="ident">Duration</span>,
+}
+
+<span class="kw">impl</span> <span class="ident">Mcts</span> {
+    <span class="doccomment">/// Creates a new `Mcts` with the given parameters.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">rounds</span>: <span class="ident">u64</span>, <span class="ident">timeout</span>: <span class="ident">Duration</span>) -&gt; <span class="ident">Mcts</span> {
+        <span class="ident">Mcts</span> { <span class="ident">rounds</span>, <span class="ident">timeout</span> }
+    }
+}
 
 <span class="attribute">#[<span class="ident">async_trait</span>]</span>
 <span class="kw">impl</span> <span class="ident">Player</span> <span class="kw">for</span> <span class="ident">Mcts</span> {
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">attach</span>(<span class="self">self</span>, <span class="kw-2">mut</span> <span class="ident">event_rx</span>: <span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">Event</span><span class="op">&gt;</span>, <span class="ident">cmd_tx</span>: <span class="ident">CmdSender</span>) {
+        <span class="kw">let</span> <span class="ident">Mcts</span> { <span class="ident">rounds</span>, <span class="ident">timeout</span> } <span class="op">=</span> <span class="self">self</span>;
         <span class="kw">let</span> <span class="ident">state</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">Mutex::new</span>(<span class="ident">MctsState::new</span>()));
 
         <span class="kw">while</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">event</span>) <span class="op">=</span> <span class="ident">event_rx</span>.<span class="ident">recv</span>().<span class="kw">await</span> {
@@ -232,12 +253,17 @@
                         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">state</span> <span class="op">=</span> <span class="ident">state</span>.<span class="ident">lock</span>().<span class="ident">unwrap</span>();
                         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rng</span> <span class="op">=</span> <span class="ident">SmallRng::from_entropy</span>();
 
-                        <span class="ident">state</span>.<span class="ident">search</span>(<span class="kw-2">&amp;mut</span> <span class="ident">rng</span>, <span class="ident">ROUNDS</span>, <span class="ident">TIMEOUT</span>);
-                        <span class="kw">let</span> <span class="ident">pair</span> <span class="op">=</span> <span class="ident">state</span>.<span class="ident">peek</span>();
-                        <span class="macro">println!</span>(<span class="string">&quot;Tentative: ({}, {})&quot;</span>, <span class="ident">pair</span>.<span class="number">0</span>, <span class="ident">pair</span>.<span class="number">1</span>);
-
-                        <span class="ident">state</span>.<span class="ident">search</span>(<span class="kw-2">&amp;mut</span> <span class="ident">rng</span>, <span class="ident">ROUNDS</span>, <span class="ident">TIMEOUT</span>);
-                        <span class="ident">state</span>.<span class="ident">peek</span>()
+                        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">last</span> <span class="op">=</span> (<span class="ident">Point::new</span>(<span class="number">0</span>, <span class="number">0</span>), <span class="ident">Point::new</span>(<span class="number">0</span>, <span class="number">0</span>));
+                        <span class="kw">loop</span> {
+                            <span class="ident">state</span>.<span class="ident">search</span>(<span class="kw-2">&amp;mut</span> <span class="ident">rng</span>, <span class="ident">rounds</span>, <span class="ident">timeout</span>);
+                            <span class="kw">let</span> <span class="ident">pair</span> <span class="op">=</span> <span class="ident">state</span>.<span class="ident">peek</span>();
+                            <span class="kw">if</span> <span class="ident">pair</span> <span class="op">==</span> <span class="ident">last</span> {
+                                <span class="kw">break</span>;
+                            }
+                            <span class="macro">println!</span>(<span class="string">&quot;Tentative: ({}, {})&quot;</span>, <span class="ident">pair</span>.<span class="number">0</span>, <span class="ident">pair</span>.<span class="number">1</span>);
+                            <span class="ident">last</span> <span class="op">=</span> <span class="ident">pair</span>;
+                        }
+                        <span class="ident">last</span>
                     })
                     .<span class="kw">await</span>
                     .<span class="ident">unwrap</span>();
@@ -252,5 +278,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="connect6" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (420c970cb 2022-06-09)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="connect6" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (ec55c6130 2022-06-10)" ></div>
 </body></html>
