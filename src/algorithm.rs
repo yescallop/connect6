@@ -321,8 +321,8 @@ impl MctsState {
         let deadline = Instant::now() + timeout;
         while Instant::now() < deadline {
             let (leaf, expand) = self.traverse();
-            leaf.simulate(rng, rounds);
-            self.back_propagate(expand);
+            let wins = leaf.simulate(rng, rounds);
+            self.back_propagate(expand, rounds, wins);
         }
     }
 
@@ -430,24 +430,24 @@ impl MctsState {
         (leaf, expand)
     }
 
-    fn back_propagate(&mut self, mut expand: bool) {
+    fn back_propagate(&mut self, mut expand: bool, rounds: u64, mut wins: u64) {
         let (&node, path) = self.path.split_last().unwrap();
         let mut node = unsafe { &mut *node };
 
-        let &mut Node { mut wins, sims, .. } = node;
-
+        node.wins += wins;
+        node.sims += rounds;
         unsafe { self.board.remove(node.point, stone(self.index)) }
 
         for node_i in (0..path.len()).rev() {
             if self.index & 1 == 0 {
-                wins = sims - wins;
+                wins = rounds - wins;
             }
             self.index -= 1;
 
             unsafe {
                 node = &mut *path[node_i];
                 node.wins += wins;
-                node.sims += sims;
+                node.sims += rounds;
 
                 if expand {
                     node.children.sift_up_last();
@@ -471,14 +471,12 @@ unsafe impl Send for MctsState {}
 unsafe impl Sync for MctsState {}
 
 impl<'a> Leaf<'a> {
-    fn simulate<R>(self, rng: &mut R, rounds: u64)
+    fn simulate<R>(self, rng: &mut R, rounds: u64) -> u64
     where
         R: Rng + ?Sized,
     {
-        self.node.sims = rounds;
         if self.node.sure_win {
-            self.node.wins = rounds;
-            return;
+            return rounds;
         }
 
         let uv = &mut self.node.unvisited[..];
@@ -505,7 +503,7 @@ impl<'a> Leaf<'a> {
             }
             draws += 1;
         }
-        self.node.wins = wins + draws / 2;
+        wins + draws / 2
     }
 }
 

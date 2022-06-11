@@ -83,15 +83,23 @@ impl Player for Chaos {
     }
 }
 
-const ROUNDS: u64 = 1024;
-const TIMEOUT: Duration = Duration::from_secs(20);
-
 /// A player that uses Monte-Carlo tree search.
-pub struct Mcts;
+pub struct Mcts {
+    rounds: u64,
+    timeout: Duration,
+}
+
+impl Mcts {
+    /// Creates a new `Mcts` with the given parameters.
+    pub fn new(rounds: u64, timeout: Duration) -> Mcts {
+        Mcts { rounds, timeout }
+    }
+}
 
 #[async_trait]
 impl Player for Mcts {
     async fn attach(self, mut event_rx: Receiver<Event>, cmd_tx: CmdSender) {
+        let Mcts { rounds, timeout } = self;
         let state = Arc::new(Mutex::new(MctsState::new()));
 
         while let Some(event) = event_rx.recv().await {
@@ -102,12 +110,17 @@ impl Player for Mcts {
                         let mut state = state.lock().unwrap();
                         let mut rng = SmallRng::from_entropy();
 
-                        state.search(&mut rng, ROUNDS, TIMEOUT);
-                        let pair = state.peek();
-                        println!("Tentative: ({}, {})", pair.0, pair.1);
-
-                        state.search(&mut rng, ROUNDS, TIMEOUT);
-                        state.peek()
+                        let mut last = (Point::new(0, 0), Point::new(0, 0));
+                        loop {
+                            state.search(&mut rng, rounds, timeout);
+                            let pair = state.peek();
+                            if pair == last {
+                                break;
+                            }
+                            println!("Tentative: ({}, {})", pair.0, pair.1);
+                            last = pair;
+                        }
+                        last
                     })
                     .await
                     .unwrap();

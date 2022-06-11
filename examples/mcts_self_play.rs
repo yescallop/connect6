@@ -4,13 +4,13 @@ use connect6::{
     algorithm::MctsState,
     console,
     message::{Cmd, FullCmd},
-    Builder, Handle,
+    Builder, Handle, board::Point,
 };
 use rand::prelude::*;
 use tokio::task;
 
-const ROUNDS: u64 = 1024;
-const TIMEOUT: Duration = Duration::from_secs(20);
+const ROUNDS: u64 = 256;
+const TIMEOUT: Duration = Duration::from_secs(15);
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
@@ -24,11 +24,17 @@ async fn main() {
         let mut rng = SmallRng::from_entropy();
 
         while !state.is_terminal() {
-            state.search(&mut rng, ROUNDS, TIMEOUT);
-            let pair = state.peek();
-            println!("Tentative: ({}, {})", pair.0, pair.1);
+            let mut last = (Point::new(0, 0), Point::new(0, 0));
+            loop {
+                state.search(&mut rng, ROUNDS, TIMEOUT);
+                let pair = state.peek();
+                if pair == last {
+                    break;
+                }
+                println!("Tentative: ({}, {})", pair.0, pair.1);
+                last = pair;
+            }
 
-            state.search(&mut rng, ROUNDS, TIMEOUT);
             let cmd = FullCmd {
                 cmd: Cmd::Move(Some(state.pop())),
                 stone: None,
