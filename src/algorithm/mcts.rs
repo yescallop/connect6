@@ -142,6 +142,11 @@ impl MctsState {
             Some(mov) => mov,
             None => return,
         };
+        let size = SIZE as u32;
+        assert!(
+            mov.0.x < size && mov.0.y < size && mov.1.x < size && mov.1.y < size,
+            "out of board"
+        );
 
         self.root.point = mov.1;
         let stone = stone(self.index);
@@ -197,11 +202,9 @@ impl MctsState {
             }
             self.index -= 1;
 
-            unsafe {
-                node = &mut *path[node_i];
-                node.wins += wins;
-                node.sims += rounds;
-            }
+            unsafe { node = &mut *path[node_i] }
+            node.wins += wins;
+            node.sims += rounds;
 
             if node_i != 0 {
                 // Don't remove the stone for the root.
