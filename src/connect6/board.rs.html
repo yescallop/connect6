@@ -1092,8 +1092,8 @@
             <span class="kw">for</span> <span class="ident">x</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">size</span> {
                 <span class="kw">let</span> <span class="ident">slot</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="self">self</span>[(<span class="ident">x</span>, <span class="ident">y</span>)];
                 <span class="kw">let</span> <span class="ident">char</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">slot</span>.<span class="ident">stone</span>() {
-                    <span class="prelude-val">Some</span>(<span class="ident">Stone::Black</span>) =&gt; <span class="string">&#39;X&#39;</span>,
-                    <span class="prelude-val">Some</span>(<span class="ident">Stone::White</span>) =&gt; <span class="string">&#39;0&#39;</span>,
+                    <span class="prelude-val">Some</span>(<span class="ident">Stone::Black</span>) =&gt; <span class="string">&#39;●&#39;</span>,
+                    <span class="prelude-val">Some</span>(<span class="ident">Stone::White</span>) =&gt; <span class="string">&#39;○&#39;</span>,
                     <span class="prelude-val">None</span> =&gt; <span class="string">&#39;-&#39;</span>,
                 };
                 <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot; {}&quot;</span>, <span class="ident">char</span>)<span class="question-mark">?</span>;
@@ -1208,5 +1208,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="connect6" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (ec55c6130 2022-06-10)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="connect6" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (99930ac7f 2022-06-11)" ></div>
 </body></html>
