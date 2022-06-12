@@ -4,7 +4,7 @@ use connect6::{
     algorithm::MctsState,
     console,
     message::{Cmd, FullCmd},
-    Builder, Handle, board::Point,
+    Builder, Handle,
 };
 use rand::prelude::*;
 use tokio::task;
@@ -24,17 +24,11 @@ async fn main() {
         let mut rng = SmallRng::from_entropy();
 
         while !state.is_terminal() {
-            let mut last = (Point::new(0, 0), Point::new(0, 0));
-            loop {
-                state.search(&mut rng, ROUNDS, TIMEOUT);
-                let pair = state.peek();
-                if pair == last {
-                    break;
-                }
-                println!("Tentative: ({}, {})", pair.0, pair.1);
-                last = pair;
-            }
+            state.search(&mut rng, ROUNDS, TIMEOUT);
+            let pair = state.peek();
+            println!("Tentative: ({}, {})", pair.0, pair.1);
 
+            state.search(&mut rng, ROUNDS, TIMEOUT);
             let cmd = FullCmd {
                 cmd: Cmd::Move(Some(state.pop())),
                 stone: None,

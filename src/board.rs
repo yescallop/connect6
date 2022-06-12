@@ -484,8 +484,8 @@ impl fmt::Display for Board {
             for x in 0..size {
                 let slot = &self[(x, y)];
                 let char = match slot.stone() {
-                    Some(Stone::Black) => 'X',
-                    Some(Stone::White) => '0',
+                    Some(Stone::Black) => '●',
+                    Some(Stone::White) => '○',
                     None => '-',
                 };
                 write!(f, " {}", char)?;

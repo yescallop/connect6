@@ -110,24 +110,20 @@ impl Player for Mcts {
                         let mut state = state.lock().unwrap();
                         let mut rng = SmallRng::from_entropy();
 
-                        let mut last = (Point::new(0, 0), Point::new(0, 0));
-                        loop {
-                            state.search(&mut rng, rounds, timeout);
-                            let pair = state.peek();
-                            if pair == last {
-                                break;
-                            }
-                            println!("Tentative: ({}, {})", pair.0, pair.1);
-                            last = pair;
-                        }
-                        last
+                        state.search(&mut rng, rounds, timeout);
+                        state.peek()
                     })
                     .await
                     .unwrap();
                     cmd_tx.make_move(Some(mov));
                 }
                 Event::Move(mov) => {
-                    state.lock().unwrap().advance(mov);
+                    let state = state.clone();
+                    task::spawn_blocking(move || {
+                        state.lock().unwrap().advance(mov);
+                    })
+                    .await
+                    .unwrap();
                 }
                 _ => (),
             }
