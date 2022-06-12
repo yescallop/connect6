@@ -1,9 +1,9 @@
 use std::{
-    cmp, fmt, mem,
+    fmt, mem,
     time::{Duration, Instant},
 };
 
-use super::{binary_heap::BinaryHeap, *};
+use super::*;
 
 use rand::prelude::*;
 
@@ -31,7 +31,7 @@ struct Node {
     sure_win: bool,
     unvisited: Vec<Point>,
     visited: u32,
-    children: BinaryHeap<Node>,
+    children: Vec<Node>,
 }
 
 impl fmt::Debug for Node {
@@ -65,7 +65,7 @@ impl MctsState {
             wins: 0,
             sims: 0,
             sure_win: false,
-            children: BinaryHeap::with_capacity(unvisited.len()),
+            children: Vec::with_capacity(unvisited.len()),
             unvisited,
             visited: 0,
         });
@@ -91,9 +91,9 @@ impl MctsState {
     {
         let deadline = Instant::now() + timeout;
         while Instant::now() < deadline {
-            let (leaf, expand) = self.traverse();
+            let leaf = self.traverse();
             let wins = leaf.simulate(rng, rounds);
-            self.back_propagate(expand, rounds, wins);
+            self.back_propagate(rounds, wins);
         }
     }
 
@@ -133,42 +133,26 @@ impl MctsState {
     /// Advances through the given pair of moves, if any.
     pub fn advance(&mut self, mov: Option<(Point, Point)>) {
         self.index += 2;
+        self.root.wins = 0;
+        self.root.sims = 0;
+        self.root.visited = 0;
+        self.root.children.clear();
+
         let mov = match mov {
             Some(mov) => mov,
-            None => {
-                self.root.wins = 0;
-                self.root.sims = 0;
-                self.root.visited = 0;
-                self.root.children.clear();
-                return;
-            }
+            None => return,
         };
 
+        self.root.point = mov.1;
         let stone = stone(self.index);
-        let sure_win = unsafe {
+        self.root.sure_win = unsafe {
             self.board.set_and_check_win(mov.0, stone) | self.board.set_and_check_win(mov.1, stone)
         };
 
-        let unvisited: Vec<_> = self
-            .root
-            .unvisited
-            .iter()
-            .copied()
-            .filter(|&p| p != mov.0 && p != mov.1)
-            .collect();
-
-        *self.root = Node {
-            point: mov.1,
-            wins: 0,
-            sims: 0,
-            sure_win,
-            children: BinaryHeap::with_capacity(unvisited.len()),
-            unvisited,
-            visited: 0,
-        };
+        self.root.unvisited.retain(|&p| p != mov.0 && p != mov.1);
     }
 
-    fn traverse(&mut self) -> (Leaf<'_>, bool) {
+    fn traverse(&mut self) -> Leaf<'_> {
         let mut node = &mut *self.root;
 
         while node.unvisited.len() as u32 == node.visited {
@@ -176,15 +160,14 @@ impl MctsState {
                 break;
             }
 
-            node = node.children.peek_mut().unwrap();
+            node = node.peek_best().unwrap();
             self.path.push(node);
 
             self.index += 1;
             unsafe { self.board.set(node.point, stone(self.index)) }
         }
 
-        let expand = !node.is_terminal();
-        if expand {
+        if !node.is_terminal() {
             node = node.expand();
             self.path.push(node);
 
@@ -192,16 +175,15 @@ impl MctsState {
             node.sure_win = unsafe { self.board.set_and_check_win(node.point, stone(self.index)) };
         }
 
-        let leaf = Leaf {
+        Leaf {
             node,
             board: &mut self.board,
             sim_board: &mut self.sim_board,
             index: self.index,
-        };
-        (leaf, expand)
+        }
     }
 
-    fn back_propagate(&mut self, mut expand: bool, rounds: u64, mut wins: u64) {
+    fn back_propagate(&mut self, rounds: u64, mut wins: u64) {
         let (&node, path) = self.path.split_last().unwrap();
         let mut node = unsafe { &mut *node };
 
@@ -219,13 +201,6 @@ impl MctsState {
                 node = &mut *path[node_i];
                 node.wins += wins;
                 node.sims += rounds;
-
-                if expand {
-                    node.children.sift_up_last();
-                    expand = false;
-                } else {
-                    node.children.sift_down_first();
-                }
             }
 
             if node_i != 0 {
@@ -295,16 +270,23 @@ impl Node {
             wins: 0,
             sims: 0,
             sure_win: false,
-            children: BinaryHeap::new(),
+            children: Vec::new(),
             unvisited,
             visited: 0,
         };
 
-        self.children.push(child)
+        self.children.push(child);
+        self.children.last_mut().unwrap()
     }
 
     fn is_terminal(&self) -> bool {
         self.sure_win || self.unvisited.is_empty()
+    }
+
+    fn peek_best(&mut self) -> Option<&mut Node> {
+        self.children
+            .iter_mut()
+            .max_by(|a, b| (a.wins * b.sims).cmp(&(a.sims * b.wins)))
     }
 
     fn peek(&self) -> Option<&Node> {
@@ -321,28 +303,5 @@ impl Node {
             Some((i, _)) => Some(self.children.swap_remove(i)),
             None => None,
         }
-    }
-}
-
-impl PartialEq for Node {
-    #[inline]
-    fn eq(&self, other: &Node) -> bool {
-        self.wins * other.sims == self.sims * other.wins
-    }
-}
-
-impl Eq for Node {}
-
-impl PartialOrd for Node {
-    #[inline]
-    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for Node {
-    #[inline]
-    fn cmp(&self, other: &Self) -> cmp::Ordering {
-        (self.wins * other.sims).cmp(&(self.sims * other.wins))
     }
 }

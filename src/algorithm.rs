@@ -1,7 +1,5 @@
 use std::alloc::{self, Layout};
 
-mod binary_heap;
-
 use crate::board::{Point, Stone};
 
 /// The board size used by the algorithms in this module.
