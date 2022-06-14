@@ -5,7 +5,7 @@ use std::{
 };
 
 use crate::{
-    algorithm::MctsState,
+    algorithm::mcts::{MctsState, Policy},
     board::Point,
     channel::{CmdSender, Receiver},
     console,
@@ -84,23 +84,29 @@ impl Player for Chaos {
 }
 
 /// A player that uses Monte-Carlo tree search.
-pub struct Mcts {
+pub struct Mcts<P: Policy> {
     rounds: u64,
     timeout: Duration,
+    policy: P,
 }
 
-impl Mcts {
+impl<P: Policy> Mcts<P> {
     /// Creates a new `Mcts` with the given parameters.
-    pub fn new(rounds: u64, timeout: Duration) -> Mcts {
-        Mcts { rounds, timeout }
+    pub fn new(policy: P, rounds: u64, timeout: Duration) -> Self {
+        Self {
+            rounds,
+            timeout,
+            policy,
+        }
     }
 }
 
 #[async_trait]
-impl Player for Mcts {
+impl<P: Policy> Player for Mcts<P> {
     async fn attach(self, mut event_rx: Receiver<Event>, cmd_tx: CmdSender) {
-        let Mcts { rounds, timeout } = self;
-        let state = Arc::new(Mutex::new(MctsState::new()));
+        let rounds = self.rounds;
+        let timeout = self.timeout / 3;
+        let state = Arc::new(Mutex::new(MctsState::new(self.policy)));
 
         while let Some(event) = event_rx.recv().await {
             match event {
@@ -109,6 +115,12 @@ impl Player for Mcts {
                     let mov = task::spawn_blocking(move || {
                         let mut state = state.lock().unwrap();
                         let mut rng = SmallRng::from_entropy();
+
+                        for _ in 0..2 {
+                            state.search(&mut rng, rounds, timeout);
+                            let pair = state.peek();
+                            println!("Tentative: ({}, {})", pair.0, pair.1);
+                        }
 
                         state.search(&mut rng, rounds, timeout);
                         state.peek()

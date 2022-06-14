@@ -227,5 +227,5 @@ fn stone(index: u32) -> Stone {
     }
 }
 
-mod mcts;
-pub use mcts::MctsState;
+/// Implementations of Monte-Carlo tree search (MCTS).
+pub mod mcts;

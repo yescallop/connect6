@@ -4,14 +4,16 @@ use std::{
 };
 
 use connect6::{
+    algorithm::mcts::Uct,
     board::Stone,
     player::{Console, Mcts},
     Builder,
 };
 use tokio::task;
 
-const ROUNDS: u64 = 256;
-const TIMEOUT: Duration = Duration::from_secs(30);
+const UCT_C: f64 = 0.056;
+const ROUNDS: u64 = 32;
+const TIMEOUT: Duration = Duration::from_secs(60);
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
@@ -34,12 +36,12 @@ async fn main() {
     if stone == Stone::Black {
         Builder::new()
             .build()
-            .start(Console, Mcts::new(ROUNDS, TIMEOUT))
+            .start(Console, Mcts::new(Uct(UCT_C), ROUNDS, TIMEOUT))
             .await;
     } else {
         Builder::new()
             .build()
-            .start(Mcts::new(ROUNDS, TIMEOUT), Console)
+            .start(Mcts::new(Uct(UCT_C), ROUNDS, TIMEOUT), Console)
             .await;
     }
 }

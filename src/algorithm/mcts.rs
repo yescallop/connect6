@@ -3,18 +3,70 @@ use std::{
     time::{Duration, Instant},
 };
 
-use super::*;
+use super::{stone, BitBoard, SIZE};
+use crate::board::{Point, Stone};
 
 use rand::prelude::*;
 
+mod internal {
+    use super::*;
+
+    pub struct Node {
+        pub point: Point,
+        pub wins: u64,
+        pub sims: u64,
+        pub visits: u32,
+        pub sure_win: bool,
+        pub unvisited: Vec<Point>,
+        pub visited: u32,
+        pub children: Vec<Node>,
+    }
+}
+
+use internal::Node;
+
+/// A policy for MCTS.
+pub trait Policy: 'static + Send {
+    /// Peeks the best child of a node.
+    fn peek_best<'a>(&self, node: &'a mut Node) -> Option<&'a mut Node>;
+}
+
+/// Pure MCTS policy.
+pub struct Pure;
+
+impl Policy for Pure {
+    #[inline]
+    fn peek_best<'a>(&self, node: &'a mut Node) -> Option<&'a mut Node> {
+        node.children
+            .iter_mut()
+            .max_by(|a, b| (a.wins * b.sims).cmp(&(a.sims * b.wins)))
+    }
+}
+
+/// UCT-based MCTS policy.
+pub struct Uct(pub f64);
+
+impl Policy for Uct {
+    #[inline]
+    fn peek_best<'a>(&self, node: &'a mut Node) -> Option<&'a mut Node> {
+        let k = (node.visits as f64).ln();
+        node.children.iter_mut().max_by(|a, b| {
+            let a = a.wins as f64 / a.sims as f64 + self.0 * (k / a.visits as f64).sqrt();
+            let b = b.wins as f64 / b.sims as f64 + self.0 * (k / b.visits as f64).sqrt();
+            a.partial_cmp(&b).unwrap()
+        })
+    }
+}
+
 /// A state for Monte-Carlo tree search (MCTS).
 #[derive(Debug)]
-pub struct MctsState {
+pub struct MctsState<P: Policy> {
     root: Box<Node>,
     board: Box<BitBoard>,
     sim_board: Box<BitBoard>,
     path: Vec<*mut Node>,
     index: u32,
+    policy: P,
 }
 
 struct Leaf<'a> {
@@ -22,16 +74,6 @@ struct Leaf<'a> {
     board: &'a mut BitBoard,
     sim_board: &'a mut BitBoard,
     index: u32,
-}
-
-struct Node {
-    point: Point,
-    wins: u64,
-    sims: u64,
-    sure_win: bool,
-    unvisited: Vec<Point>,
-    visited: u32,
-    children: Vec<Node>,
 }
 
 impl fmt::Debug for Node {
@@ -46,9 +88,9 @@ impl fmt::Debug for Node {
     }
 }
 
-impl MctsState {
+impl<P: Policy> MctsState<P> {
     /// Creates a new `MctsState`.
-    pub fn new() -> Self {
+    pub fn new(policy: P) -> Self {
         let size = SIZE as u32;
         let center = (size / 2, size / 2).into();
 
@@ -64,6 +106,7 @@ impl MctsState {
             point: center,
             wins: 0,
             sims: 0,
+            visits: 0,
             sure_win: false,
             children: Vec::with_capacity(unvisited.len()),
             unvisited,
@@ -76,6 +119,7 @@ impl MctsState {
             board,
             sim_board: BitBoard::new(),
             index: 1,
+            policy,
         }
     }
 
@@ -133,28 +177,48 @@ impl MctsState {
     /// Advances through the given pair of moves, if any.
     pub fn advance(&mut self, mov: Option<(Point, Point)>) {
         self.index += 2;
+
+        if let Some(mov) = mov {
+            let size = SIZE as u32;
+            assert!(
+                mov.0.x < size && mov.0.y < size && mov.1.x < size && mov.1.y < size,
+                "out of board"
+            );
+
+            let stone = stone(self.index);
+
+            if self.try_reuse(mov) || self.try_reuse((mov.1, mov.0)) {
+                unsafe {
+                    self.board.set(mov.0, stone);
+                    self.board.set(mov.1, stone);
+                }
+                return;
+            }
+
+            self.root.point = mov.1;
+            self.root.sure_win = unsafe {
+                self.board.set_and_check_win(mov.0, stone)
+                    || self.board.set_and_check_win(mov.1, stone)
+            };
+
+            self.root.unvisited.retain(|&p| p != mov.0 && p != mov.1);
+        }
+
         self.root.wins = 0;
         self.root.sims = 0;
+        self.root.visits = 0;
         self.root.visited = 0;
         self.root.children.clear();
+    }
 
-        let mov = match mov {
-            Some(mov) => mov,
-            None => return,
-        };
-        let size = SIZE as u32;
-        assert!(
-            mov.0.x < size && mov.0.y < size && mov.1.x < size && mov.1.y < size,
-            "out of board"
-        );
-
-        self.root.point = mov.1;
-        let stone = stone(self.index);
-        self.root.sure_win = unsafe {
-            self.board.set_and_check_win(mov.0, stone) | self.board.set_and_check_win(mov.1, stone)
-        };
-
-        self.root.unvisited.retain(|&p| p != mov.0 && p != mov.1);
+    fn try_reuse(&mut self, mov: (Point, Point)) -> bool {
+        if let Some(node) = self.root.children.iter_mut().find(|n| n.point == mov.0) {
+            if let Some(i) = node.children.iter().position(|n| n.point == mov.1) {
+                *self.root = node.children.swap_remove(i);
+                return true;
+            }
+        }
+        false
     }
 
     fn traverse(&mut self) -> Leaf<'_> {
@@ -165,7 +229,7 @@ impl MctsState {
                 break;
             }
 
-            node = node.peek_best().unwrap();
+            node = self.policy.peek_best(node).unwrap();
             self.path.push(node);
 
             self.index += 1;
@@ -194,6 +258,7 @@ impl MctsState {
 
         node.wins += wins;
         node.sims += rounds;
+        node.visits += 1;
         unsafe { self.board.remove(node.point, stone(self.index)) }
 
         for node_i in (0..path.len()).rev() {
@@ -205,6 +270,7 @@ impl MctsState {
             unsafe { node = &mut *path[node_i] }
             node.wins += wins;
             node.sims += rounds;
+            node.visits += 1;
 
             if node_i != 0 {
                 // Don't remove the stone for the root.
@@ -216,8 +282,8 @@ impl MctsState {
     }
 }
 
-unsafe impl Send for MctsState {}
-unsafe impl Sync for MctsState {}
+unsafe impl<P: Policy> Send for MctsState<P> {}
+unsafe impl<P: Policy> Sync for MctsState<P> {}
 
 impl<'a> Leaf<'a> {
     fn simulate<R>(self, rng: &mut R, rounds: u64) -> u64
@@ -272,6 +338,7 @@ impl Node {
             point,
             wins: 0,
             sims: 0,
+            visits: 0,
             sure_win: false,
             children: Vec::new(),
             unvisited,
@@ -286,14 +353,8 @@ impl Node {
         self.sure_win || self.unvisited.is_empty()
     }
 
-    fn peek_best(&mut self) -> Option<&mut Node> {
-        self.children
-            .iter_mut()
-            .max_by(|a, b| (a.wins * b.sims).cmp(&(a.sims * b.wins)))
-    }
-
     fn peek(&self) -> Option<&Node> {
-        self.children.iter().max_by(|a, b| a.sims.cmp(&b.sims))
+        self.children.iter().max_by(|a, b| a.visits.cmp(&b.visits))
     }
 
     fn pop(&mut self) -> Option<Node> {
@@ -301,7 +362,7 @@ impl Node {
             .children
             .iter()
             .enumerate()
-            .max_by(|(_, a), (_, b)| a.sims.cmp(&b.sims));
+            .max_by(|(_, a), (_, b)| a.visits.cmp(&b.visits));
         match opt {
             Some((i, _)) => Some(self.children.swap_remove(i)),
             None => None,

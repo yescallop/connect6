@@ -1,4 +1,4 @@
-Played with MCTS (R=256, T=15s) (Black) on Sat, 11 Jun 2022 ~22:00 GMT+8
+Played with MCTS (R=256, T=15s, ponder-more-if-hesitant) (Black) on Sat, 11 Jun 2022 ~22:00 GMT+8
 ------- GAME SETTINGS --------
 Board size: 19
 -------- GAME STARTED --------

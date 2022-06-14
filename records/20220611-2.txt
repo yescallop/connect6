@@ -1,4 +1,4 @@
-MCTS (R=256, T=15s, same-tree) self-played on Sat, 11 Jun 2022 23:18 GMT+8
+MCTS (R=256, T=15s, ponder-more-if-hesitant, same-tree) self-played on Sat, 11 Jun 2022 23:18 GMT+8
 ------- GAME SETTINGS --------
 Board size: 19
 -------- GAME STARTED --------
