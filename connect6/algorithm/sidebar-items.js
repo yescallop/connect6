@@ -1,1 +1,1 @@
-initSidebarItems({"constant":[["SIZE","The board size used by the algorithms in this module."]],"struct":[["BitBoard","A bit-packed Connect6 board with optimized win checking algorithm."],["MctsState","A state for Monte-Carlo tree search (MCTS)."]]});
+initSidebarItems({"constant":[["SIZE","The board size used by the algorithms in this module."]],"mod":[["mcts","Implementations of Monte-Carlo tree search (MCTS)."]],"struct":[["BitBoard","A bit-packed Connect6 board with optimized win checking algorithm."]]});

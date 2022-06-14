@@ -137,6 +137,18 @@
 <span id="130">130</span>
 <span id="131">131</span>
 <span id="132">132</span>
+<span id="133">133</span>
+<span id="134">134</span>
+<span id="135">135</span>
+<span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
+<span id="139">139</span>
+<span id="140">140</span>
+<span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">collections::HashSet</span>,
     <span class="ident">sync</span>::{<span class="ident">Arc</span>, <span class="ident">Mutex</span>},
@@ -144,7 +156,7 @@
 };
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">algorithm::MctsState</span>,
+    <span class="ident">algorithm::mcts</span>::{<span class="ident">MctsState</span>, <span class="ident">Policy</span>},
     <span class="ident">board::Point</span>,
     <span class="ident">channel</span>::{<span class="ident">CmdSender</span>, <span class="ident">Receiver</span>},
     <span class="ident">console</span>,
@@ -223,23 +235,29 @@
 }
 
 <span class="doccomment">/// A player that uses Monte-Carlo tree search.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Mcts</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Mcts</span><span class="op">&lt;</span><span class="ident">P</span>: <span class="ident">Policy</span><span class="op">&gt;</span> {
     <span class="ident">rounds</span>: <span class="ident">u64</span>,
     <span class="ident">timeout</span>: <span class="ident">Duration</span>,
+    <span class="ident">policy</span>: <span class="ident">P</span>,
 }
 
-<span class="kw">impl</span> <span class="ident">Mcts</span> {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">P</span>: <span class="ident">Policy</span><span class="op">&gt;</span> <span class="ident">Mcts</span><span class="op">&lt;</span><span class="ident">P</span><span class="op">&gt;</span> {
     <span class="doccomment">/// Creates a new `Mcts` with the given parameters.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">rounds</span>: <span class="ident">u64</span>, <span class="ident">timeout</span>: <span class="ident">Duration</span>) -&gt; <span class="ident">Mcts</span> {
-        <span class="ident">Mcts</span> { <span class="ident">rounds</span>, <span class="ident">timeout</span> }
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">policy</span>: <span class="ident">P</span>, <span class="ident">rounds</span>: <span class="ident">u64</span>, <span class="ident">timeout</span>: <span class="ident">Duration</span>) -&gt; <span class="self">Self</span> {
+        <span class="self">Self</span> {
+            <span class="ident">rounds</span>,
+            <span class="ident">timeout</span>,
+            <span class="ident">policy</span>,
+        }
     }
 }
 
 <span class="attribute">#[<span class="ident">async_trait</span>]</span>
-<span class="kw">impl</span> <span class="ident">Player</span> <span class="kw">for</span> <span class="ident">Mcts</span> {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">P</span>: <span class="ident">Policy</span><span class="op">&gt;</span> <span class="ident">Player</span> <span class="kw">for</span> <span class="ident">Mcts</span><span class="op">&lt;</span><span class="ident">P</span><span class="op">&gt;</span> {
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">attach</span>(<span class="self">self</span>, <span class="kw-2">mut</span> <span class="ident">event_rx</span>: <span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">Event</span><span class="op">&gt;</span>, <span class="ident">cmd_tx</span>: <span class="ident">CmdSender</span>) {
-        <span class="kw">let</span> <span class="ident">Mcts</span> { <span class="ident">rounds</span>, <span class="ident">timeout</span> } <span class="op">=</span> <span class="self">self</span>;
-        <span class="kw">let</span> <span class="ident">state</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">Mutex::new</span>(<span class="ident">MctsState::new</span>()));
+        <span class="kw">let</span> <span class="ident">rounds</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">rounds</span>;
+        <span class="kw">let</span> <span class="ident">timeout</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">timeout</span> <span class="op">/</span> <span class="number">3</span>;
+        <span class="kw">let</span> <span class="ident">state</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">Mutex::new</span>(<span class="ident">MctsState::new</span>(<span class="self">self</span>.<span class="ident">policy</span>)));
 
         <span class="kw">while</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">event</span>) <span class="op">=</span> <span class="ident">event_rx</span>.<span class="ident">recv</span>().<span class="kw">await</span> {
             <span class="kw">match</span> <span class="ident">event</span> {
@@ -248,6 +266,12 @@
                     <span class="kw">let</span> <span class="ident">mov</span> <span class="op">=</span> <span class="ident">task::spawn_blocking</span>(<span class="kw">move</span> <span class="op">|</span><span class="op">|</span> {
                         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">state</span> <span class="op">=</span> <span class="ident">state</span>.<span class="ident">lock</span>().<span class="ident">unwrap</span>();
                         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rng</span> <span class="op">=</span> <span class="ident">SmallRng::from_entropy</span>();
+
+                        <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="number">2</span> {
+                            <span class="ident">state</span>.<span class="ident">search</span>(<span class="kw-2">&amp;mut</span> <span class="ident">rng</span>, <span class="ident">rounds</span>, <span class="ident">timeout</span>);
+                            <span class="kw">let</span> <span class="ident">pair</span> <span class="op">=</span> <span class="ident">state</span>.<span class="ident">peek</span>();
+                            <span class="macro">println!</span>(<span class="string">&quot;Tentative: ({}, {})&quot;</span>, <span class="ident">pair</span>.<span class="number">0</span>, <span class="ident">pair</span>.<span class="number">1</span>);
+                        }
 
                         <span class="ident">state</span>.<span class="ident">search</span>(<span class="kw-2">&amp;mut</span> <span class="ident">rng</span>, <span class="ident">rounds</span>, <span class="ident">timeout</span>);
                         <span class="ident">state</span>.<span class="ident">peek</span>()
@@ -270,5 +294,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="connect6" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (99930ac7f 2022-06-11)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="connect6" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (ca122c7eb 2022-06-13)" ></div>
 </body></html>
