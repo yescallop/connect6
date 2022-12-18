@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["CmdSender","A stone-specific command sender."]]});
+window.SIDEBAR_ITEMS = {"struct":[["CmdSender","A stone-specific command sender."]]};

@@ -1,3 +1,3 @@
-(function() {var implementors = {};
-implementors["connect6"] = [{"text":"impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/default/trait.Default.html\" title=\"trait core::default::Default\">Default</a> for <a class=\"struct\" href=\"connect6/struct.Builder.html\" title=\"struct connect6::Builder\">Builder</a>","synthetic":false,"types":["connect6::Builder"]}];
-if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
+(function() {var implementors = {
+"connect6":[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/default/trait.Default.html\" title=\"trait core::default::Default\">Default</a> for <a class=\"struct\" href=\"connect6/struct.Builder.html\" title=\"struct connect6::Builder\">Builder</a>"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
