@@ -28,8 +28,8 @@ impl Stone {
 impl fmt::Display for Stone {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
-            Stone::Black => "Black",
-            Stone::White => "White",
+            Stone::Black => "Black ●",
+            Stone::White => "White ○",
         })
     }
 }

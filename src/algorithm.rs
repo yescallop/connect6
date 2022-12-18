@@ -11,10 +11,9 @@ const DIAG_SIZE: usize = SIZE * 2 - 1;
 ///
 /// Use `RUSTFLAGS='-C target-cpu=native'` for maximum performance on your machine.
 ///
-/// The win check should be branchless if target features `bmi1` and `lzcnt` are enabled.
-/// You could even see some decent [auto vectorization] with adequate `AVX-512` support.
-///
-/// [auto vectorization]: https://github.com/yescallop/connect6/blob/main/assets/check_win_avx512.asm
+/// The win check should be [very fast] if target feature `avx` or `sse4.1` is enabled.
+/// 
+/// [very fast]: https://github.com/yescallop/connect6/blob/main/assets/check_win_avx_or_sse4.1.asm
 #[derive(Clone, Debug)]
 pub struct BitBoard {
     black: Store,
@@ -127,23 +126,18 @@ impl BitBoard {
             Stone::Black => &self.black,
             Stone::White => &self.white,
         };
-        let mut res = false;
 
-        let v = store.h.get_unchecked(p.y as usize).rotate_right(p.x);
-        res |= v.trailing_ones() + v.leading_ones() >= 6;
+        let a = *store.h.get_unchecked(p.y as usize);
 
-        let v = store.v.get_unchecked(p.x as usize).rotate_right(p.y);
-        res |= v.trailing_ones() + v.leading_ones() >= 6;
+        let b = *store.v.get_unchecked(p.x as usize);
 
         let i = (SIZE - 1) as u32 + p.x - p.y;
-        let v = store.a.get_unchecked(i as usize).rotate_right(p.y);
-        res |= v.trailing_ones() + v.leading_ones() >= 6;
+        let c = *store.a.get_unchecked(i as usize);
 
         let i = p.x + p.y;
-        let v = store.d.get_unchecked(i as usize).rotate_right(p.y);
-        res |= v.trailing_ones() + v.leading_ones() >= 6;
+        let d = *store.d.get_unchecked(i as usize);
 
-        res
+        detect_six([a, b, c, d])
     }
 
     /// Returns `true` if there is a potential six or overline of the given stone through the point.
@@ -157,23 +151,18 @@ impl BitBoard {
             Stone::Black => &self.black,
             Stone::White => &self.white,
         };
-        let mut res = false;
 
-        let v = store.h.get_unchecked(p.y as usize).rotate_right(p.x) | 1;
-        res |= v.trailing_ones() + v.leading_ones() >= 6;
+        let a = store.h.get_unchecked(p.y as usize) | (1 << p.x);
 
-        let v = store.v.get_unchecked(p.x as usize).rotate_right(p.y) | 1;
-        res |= v.trailing_ones() + v.leading_ones() >= 6;
+        let b = store.v.get_unchecked(p.x as usize) | (1 << p.y);
 
         let i = (SIZE - 1) as u32 + p.x - p.y;
-        let v = store.a.get_unchecked(i as usize).rotate_right(p.y) | 1;
-        res |= v.trailing_ones() + v.leading_ones() >= 6;
+        let c = store.a.get_unchecked(i as usize) | (1 << p.y);
 
         let i = p.x + p.y;
-        let v = store.d.get_unchecked(i as usize).rotate_right(p.y) | 1;
-        res |= v.trailing_ones() + v.leading_ones() >= 6;
+        let d = store.d.get_unchecked(i as usize) | (1 << p.y);
 
-        res
+        detect_six([a, b, c, d])
     }
 
     /// Sets the stone at the point and returns the result of [`check_win`].
@@ -199,23 +188,43 @@ impl BitBoard {
             Stone::Black => &mut self.black,
             Stone::White => &mut self.white,
         };
-        let mut res = false;
 
-        let v = set(&mut store.h, p.y, p.x).rotate_right(p.x);
-        res |= v.trailing_ones() + v.leading_ones() >= 6;
+        let a = set(&mut store.h, p.y, p.x);
 
-        let v = set(&mut store.v, p.x, p.y).rotate_right(p.y);
-        res |= v.trailing_ones() + v.leading_ones() >= 6;
+        let b = set(&mut store.v, p.x, p.y);
 
         let i = (SIZE - 1) as u32 + p.x - p.y;
-        let v = set(&mut store.a, i, p.y).rotate_right(p.y);
-        res |= v.trailing_ones() + v.leading_ones() >= 6;
+        let c = set(&mut store.a, i, p.y);
 
         let i = p.x + p.y;
-        let v = set(&mut store.d, i, p.y).rotate_right(p.y);
-        res |= v.trailing_ones() + v.leading_ones() >= 6;
+        let d = set(&mut store.d, i, p.y);
 
-        res
+        detect_six([a, b, c, d])
+    }
+}
+
+#[cfg(not(target_arch = "x86_64"))]
+#[inline]
+fn detect_six(arr: [u32; 4]) -> bool {
+    for mut v in arr {
+        v &= v >> 1;
+        v &= v >> 2;
+        if v & (v >> 2) != 0 {
+            return true;
+        }
+    }
+    false
+}
+
+#[cfg(target_arch = "x86_64")]
+#[inline]
+fn detect_six(arr: [u32; 4]) -> bool {
+    use std::arch::x86_64::*;
+    unsafe {
+        let mut v = _mm_setr_epi32(arr[0] as _, arr[1] as _, arr[2] as _, arr[3] as _);
+        v = _mm_and_si128(v, _mm_srli_epi32(v, 1));
+        v = _mm_and_si128(v, _mm_srli_epi32(v, 2));
+        _mm_testz_si128(v, _mm_srli_epi32(v, 2)) == 0
     }
 }
 
