@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/algorithm/mcts.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>mcts.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-1cc40db21e31a224.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../static.files/light-8fe2cf7ee64a76fb.css"><link rel="stylesheet" disabled href="../../../static.files/dark-7aacebe982779e9a.css"><link rel="stylesheet" disabled href="../../../static.files/ayu-29dcc614f7a7b461.css"><script id="default-settings" ></script><script src="../../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../../static.files/source-script-ea63cb6500f71309.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-a211dbb005fb8161.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><div class="width-limiter"><nav class="sub"><a class="sub-logo-container" href="../../../connect6/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/algorithm/mcts.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>mcts.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-54cf78c3b80fc28d.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../static.files/light-8fe2cf7ee64a76fb.css"><link rel="stylesheet" disabled href="../../../static.files/dark-7aacebe982779e9a.css"><link rel="stylesheet" disabled href="../../../static.files/ayu-29dcc614f7a7b461.css"><script id="default-settings" ></script><script src="../../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../../static.files/source-script-ea63cb6500f71309.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-a211dbb005fb8161.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><div class="width-limiter"><nav class="sub"><a class="sub-logo-container" href="../../../connect6/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -369,6 +369,9 @@
 <a href="#369" id="369">369</a>
 <a href="#370" id="370">370</a>
 <a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::{
     fmt, mem,
     time::{Duration, Instant},
@@ -377,7 +380,7 @@
 <span class="kw">use super</span>::{stone, BitBoard, SIZE};
 <span class="kw">use </span><span class="kw">crate</span>::board::{Point, Stone};
 
-<span class="kw">use </span>rand::prelude::<span class="kw-2">*</span>;
+<span class="kw">use </span>fastrand::Rng;
 
 <span class="kw">mod </span>internal {
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
@@ -424,7 +427,7 @@
         node.children.iter_mut().max_by(|a, b| {
             <span class="kw">let </span>a = a.wins <span class="kw">as </span>f64 / a.sims <span class="kw">as </span>f64 + <span class="self">self</span>.<span class="number">0 </span>* (k / a.visits <span class="kw">as </span>f64).sqrt();
             <span class="kw">let </span>b = b.wins <span class="kw">as </span>f64 / b.sims <span class="kw">as </span>f64 + <span class="self">self</span>.<span class="number">0 </span>* (k / b.visits <span class="kw">as </span>f64).sqrt();
-            a.partial_cmp(<span class="kw-2">&amp;</span>b).unwrap()
+            a.total_cmp(<span class="kw-2">&amp;</span>b)
         })
     }
 }
@@ -438,13 +441,8 @@
     path: Vec&lt;<span class="kw-2">*mut </span>Node&gt;,
     index: u32,
     policy: P,
-}
-
-<span class="kw">struct </span>Leaf&lt;<span class="lifetime">&#39;a</span>&gt; {
-    node: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>Node,
-    board: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>BitBoard,
-    sim_board: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>BitBoard,
-    index: u32,
+    rounds: u64,
+    rng: Rng,
 }
 
 <span class="kw">impl </span>fmt::Debug <span class="kw">for </span>Node {
@@ -461,7 +459,7 @@
 
 <span class="kw">impl</span>&lt;P: Policy&gt; MctsState&lt;P&gt; {
     <span class="doccomment">/// Creates a new `MctsState`.
-    </span><span class="kw">pub fn </span>new(policy: P) -&gt; <span class="self">Self </span>{
+    </span><span class="kw">pub fn </span>new(policy: P, rounds: u64) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>size = SIZE <span class="kw">as </span>u32;
         <span class="kw">let </span>center = (size / <span class="number">2</span>, size / <span class="number">2</span>).into();
 
@@ -473,7 +471,7 @@
             .collect();
         unvisited.swap_remove(unvisited.len() / <span class="number">2</span>);
 
-        <span class="kw">let </span><span class="kw-2">mut </span>root = Box::new(Node {
+        <span class="kw">let </span>root = Box::new(Node {
             point: center,
             wins: <span class="number">0</span>,
             sims: <span class="number">0</span>,
@@ -485,12 +483,14 @@
         });
 
         MctsState {
-            path: <span class="macro">vec!</span>[<span class="kw-2">&amp;mut *</span>root],
+            path: <span class="macro">vec!</span>[],
             root,
             board,
             sim_board: BitBoard::new(),
             index: <span class="number">1</span>,
+            rounds,
             policy,
+            rng: Rng::new(),
         }
     }
 
@@ -500,16 +500,30 @@
     }
 
     <span class="doccomment">/// Searches for the best moves within a certain amount of time.
-    </span><span class="kw">pub fn </span>search&lt;R&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, rng: <span class="kw-2">&amp;mut </span>R, rounds: u64, timeout: Duration)
-    <span class="kw">where
-        </span>R: Rng + <span class="question-mark">?</span>Sized,
-    {
+    </span><span class="kw">pub fn </span>search(<span class="kw-2">&amp;mut </span><span class="self">self</span>, timeout: Duration) {
         <span class="kw">let </span>deadline = Instant::now() + timeout;
         <span class="kw">while </span>Instant::now() &lt; deadline {
-            <span class="kw">let </span>leaf = <span class="self">self</span>.traverse();
-            <span class="kw">let </span>wins = leaf.simulate(rng, rounds);
-            <span class="self">self</span>.back_propagate(rounds, wins);
+            <span class="self">self</span>.search_once();
         }
+    }
+
+    <span class="doccomment">/// Searches once for the best moves.
+    </span><span class="kw">pub fn </span>search_once(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+        <span class="kw">let </span>leaf = traverse(
+            <span class="kw-2">&amp;mut </span><span class="self">self</span>.root,
+            <span class="kw-2">&amp;mut </span><span class="self">self</span>.board,
+            <span class="kw-2">&amp;mut </span><span class="self">self</span>.path,
+            <span class="kw-2">&amp;mut </span><span class="self">self</span>.index,
+            <span class="kw-2">&amp;</span><span class="self">self</span>.policy,
+        );
+        <span class="kw">let </span>wins = leaf.simulate(
+            <span class="kw-2">&amp;</span><span class="self">self</span>.board,
+            <span class="kw-2">&amp;mut </span><span class="self">self</span>.sim_board,
+            <span class="self">self</span>.index,
+            <span class="kw-2">&amp;mut </span><span class="self">self</span>.rng,
+            <span class="self">self</span>.rounds,
+        );
+        <span class="self">self</span>.back_propagate(wins);
     }
 
     <span class="doccomment">/// Returns the currently best pair of moves, without affecting the state.
@@ -555,6 +569,7 @@
                 mov.<span class="number">0</span>.x &lt; size &amp;&amp; mov.<span class="number">0</span>.y &lt; size &amp;&amp; mov.<span class="number">1</span>.x &lt; size &amp;&amp; mov.<span class="number">1</span>.y &lt; size,
                 <span class="string">&quot;out of board&quot;
             </span>);
+            <span class="macro">assert!</span>(mov.<span class="number">0 </span>!= mov.<span class="number">1</span>, <span class="string">&quot;duplicate point&quot;</span>);
 
             <span class="kw">let </span>stone = stone(<span class="self">self</span>.index);
 
@@ -569,7 +584,7 @@
             <span class="self">self</span>.root.point = mov.<span class="number">1</span>;
             <span class="self">self</span>.root.sure_win = <span class="kw">unsafe </span>{
                 <span class="self">self</span>.board.set_and_check_win(mov.<span class="number">0</span>, stone)
-                    || <span class="self">self</span>.board.set_and_check_win(mov.<span class="number">1</span>, stone)
+                    | <span class="self">self</span>.board.set_and_check_win(mov.<span class="number">1</span>, stone)
             };
 
             <span class="self">self</span>.root.unvisited.retain(|<span class="kw-2">&amp;</span>p| p != mov.<span class="number">0 </span>&amp;&amp; p != mov.<span class="number">1</span>);
@@ -592,105 +607,60 @@
         <span class="bool-val">false
     </span>}
 
-    <span class="kw">fn </span>traverse(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; Leaf&lt;<span class="lifetime">&#39;_</span>&gt; {
-        <span class="kw">let </span><span class="kw-2">mut </span>node = <span class="kw-2">&amp;mut *</span><span class="self">self</span>.root;
+    <span class="kw">fn </span>back_propagate(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw-2">mut </span>wins: u64) {
+        <span class="kw">for </span>ptr <span class="kw">in </span><span class="self">self</span>.path.drain(..).rev() {
+            <span class="kw">let </span>node = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>ptr };
 
-        <span class="kw">while </span>node.unvisited.len() <span class="kw">as </span>u32 == node.visited {
-            <span class="kw">if </span>node.children.is_empty() {
-                <span class="kw">break</span>;
-            }
-
-            node = <span class="self">self</span>.policy.peek_best(node).unwrap();
-            <span class="self">self</span>.path.push(node);
-
-            <span class="self">self</span>.index += <span class="number">1</span>;
-            <span class="kw">unsafe </span>{ <span class="self">self</span>.board.set(node.point, stone(<span class="self">self</span>.index)) }
-        }
-
-        <span class="kw">if </span>!node.is_terminal() {
-            node = node.expand();
-            <span class="self">self</span>.path.push(node);
-
-            <span class="self">self</span>.index += <span class="number">1</span>;
-            node.sure_win = <span class="kw">unsafe </span>{ <span class="self">self</span>.board.set_and_check_win(node.point, stone(<span class="self">self</span>.index)) };
-        }
-
-        Leaf {
-            node,
-            board: <span class="kw-2">&amp;mut </span><span class="self">self</span>.board,
-            sim_board: <span class="kw-2">&amp;mut </span><span class="self">self</span>.sim_board,
-            index: <span class="self">self</span>.index,
-        }
-    }
-
-    <span class="kw">fn </span>back_propagate(<span class="kw-2">&amp;mut </span><span class="self">self</span>, rounds: u64, <span class="kw-2">mut </span>wins: u64) {
-        <span class="kw">let </span>(<span class="kw-2">&amp;</span>node, path) = <span class="self">self</span>.path.split_last().unwrap();
-        <span class="kw">let </span><span class="kw-2">mut </span>node = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>node };
-
-        node.wins += wins;
-        node.sims += rounds;
-        node.visits += <span class="number">1</span>;
-        <span class="kw">unsafe </span>{ <span class="self">self</span>.board.remove(node.point, stone(<span class="self">self</span>.index)) }
-
-        <span class="kw">for </span>node_i <span class="kw">in </span>(<span class="number">0</span>..path.len()).rev() {
-            <span class="kw">if </span><span class="self">self</span>.index &amp; <span class="number">1 </span>== <span class="number">0 </span>{
-                wins = rounds - wins;
-            }
-            <span class="self">self</span>.index -= <span class="number">1</span>;
-
-            <span class="kw">unsafe </span>{ node = <span class="kw-2">&amp;mut *</span>path[node_i] }
             node.wins += wins;
-            node.sims += rounds;
+            node.sims += <span class="self">self</span>.rounds;
             node.visits += <span class="number">1</span>;
 
-            <span class="kw">if </span>node_i != <span class="number">0 </span>{
-                <span class="comment">// Don&#39;t remove the stone for the root.
-                </span><span class="kw">unsafe </span>{ <span class="self">self</span>.board.remove(node.point, stone(<span class="self">self</span>.index)) }
+            <span class="kw">if </span><span class="self">self</span>.index &amp; <span class="number">1 </span>== <span class="number">0 </span>{
+                wins = <span class="self">self</span>.rounds - wins;
             }
+
+            <span class="kw">unsafe </span>{ <span class="self">self</span>.board.remove(node.point, stone(<span class="self">self</span>.index)) }
+            <span class="self">self</span>.index -= <span class="number">1</span>;
         }
 
-        <span class="self">self</span>.path.truncate(<span class="number">1</span>);
+        <span class="self">self</span>.root.wins += wins;
+        <span class="self">self</span>.root.sims += <span class="self">self</span>.rounds;
+        <span class="self">self</span>.root.visits += <span class="number">1</span>;
     }
 }
 
 <span class="kw">unsafe impl</span>&lt;P: Policy&gt; Send <span class="kw">for </span>MctsState&lt;P&gt; {}
 <span class="kw">unsafe impl</span>&lt;P: Policy&gt; Sync <span class="kw">for </span>MctsState&lt;P&gt; {}
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; Leaf&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="kw">fn </span>simulate&lt;R&gt;(<span class="self">self</span>, rng: <span class="kw-2">&amp;mut </span>R, rounds: u64) -&gt; u64
-    <span class="kw">where
-        </span>R: Rng + <span class="question-mark">?</span>Sized,
-    {
-        <span class="kw">if </span><span class="self">self</span>.node.sure_win {
-            <span class="kw">return </span>rounds;
+<span class="kw">fn </span>traverse&lt;<span class="lifetime">&#39;a</span>&gt;(
+    root: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>Node,
+    board: <span class="kw-2">&amp;mut </span>BitBoard,
+    path: <span class="kw-2">&amp;mut </span>Vec&lt;<span class="kw-2">*mut </span>Node&gt;,
+    index: <span class="kw-2">&amp;mut </span>u32,
+    policy: <span class="kw-2">&amp;</span><span class="kw">impl </span>Policy,
+) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>Node {
+    <span class="kw">let </span><span class="kw-2">mut </span>node = <span class="kw-2">&amp;mut *</span>root;
+
+    <span class="kw">while </span>node.unvisited.len() <span class="kw">as </span>u32 == node.visited {
+        <span class="kw">if </span>node.children.is_empty() {
+            <span class="kw">break</span>;
         }
 
-        <span class="kw">let </span>uv = <span class="kw-2">&amp;mut </span><span class="self">self</span>.node.unvisited[..];
-        <span class="kw">let </span>len = uv.len() <span class="kw">as </span>u32;
-        <span class="kw">let </span><span class="kw-2">mut </span>wins = <span class="number">0</span>;
-        <span class="kw">let </span><span class="kw-2">mut </span>draws = <span class="number">0</span>;
+        node = policy.peek_best(node).unwrap();
+        path.push(node);
 
-        <span class="lifetime">&#39;outer</span>: <span class="kw">for _ in </span><span class="number">0</span>..rounds {
-            <span class="self">self</span>.sim_board.clone_from(<span class="self">self</span>.board);
-            <span class="kw">let </span><span class="kw-2">mut </span>index = <span class="self">self</span>.index;
+        <span class="kw-2">*</span>index += <span class="number">1</span>;
+        <span class="kw">unsafe </span>{ board.set(node.point, stone(<span class="kw-2">*</span>index)) }
+    }
 
-            <span class="kw">for </span>i <span class="kw">in </span>(<span class="number">1</span>..len).rev() {
-                <span class="kw">let </span>rand_i = rng.gen_range(<span class="number">0</span>..i + <span class="number">1</span>) <span class="kw">as </span>usize;
-                <span class="kw">let </span>rand = uv[rand_i];
-                uv[rand_i] = mem::replace(<span class="kw-2">&amp;mut </span>uv[i <span class="kw">as </span>usize], rand);
+    <span class="kw">if </span>!node.is_terminal() {
+        node = node.expand();
+        path.push(node);
 
-                index += <span class="number">1</span>;
-                <span class="kw">if unsafe </span>{ <span class="self">self</span>.sim_board.set_and_check_win(rand, stone(index)) } {
-                    <span class="kw">if </span>stone(index) == stone(<span class="self">self</span>.index) {
-                        wins += <span class="number">1</span>;
-                    }
-                    <span class="kw">continue </span><span class="lifetime">&#39;outer</span>;
-                }
-            }
-            draws += <span class="number">1</span>;
-        }
-        wins + draws / <span class="number">2
-    </span>}
+        <span class="kw-2">*</span>index += <span class="number">1</span>;
+        node.sure_win = <span class="kw">unsafe </span>{ board.set_and_check_win(node.point, stone(<span class="kw-2">*</span>index)) };
+    }
+    node
 }
 
 <span class="kw">impl </span>Node {
@@ -699,11 +669,8 @@
         <span class="self">self</span>.visited += <span class="number">1</span>;
 
         <span class="kw">let </span>point = <span class="self">self</span>.unvisited[i];
-        <span class="kw">let </span>unvisited: Vec&lt;<span class="kw">_</span>&gt; = <span class="self">self</span>.unvisited[..i]
-            .iter()
-            .chain(<span class="kw-2">&amp;</span><span class="self">self</span>.unvisited[i + <span class="number">1</span>..])
-            .copied()
-            .collect();
+        <span class="kw">let </span><span class="kw-2">mut </span>unvisited = <span class="self">self</span>.unvisited.clone();
+        unvisited.swap_remove(i);
 
         <span class="kw">let </span>child = Node {
             point,
@@ -719,6 +686,45 @@
         <span class="self">self</span>.children.push(child);
         <span class="self">self</span>.children.last_mut().unwrap()
     }
+
+    <span class="kw">fn </span>simulate(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        board: <span class="kw-2">&amp;</span>BitBoard,
+        sim_board: <span class="kw-2">&amp;mut </span>BitBoard,
+        index: u32,
+        rng: <span class="kw-2">&amp;mut </span>Rng,
+        rounds: u64,
+    ) -&gt; u64 {
+        <span class="kw">if </span><span class="self">self</span>.sure_win {
+            <span class="kw">return </span>rounds;
+        }
+
+        <span class="kw">let </span>uv = <span class="kw-2">&amp;mut </span><span class="self">self</span>.unvisited[..];
+        <span class="kw">let </span><span class="kw-2">mut </span>wins = <span class="number">0</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>draws = <span class="number">0</span>;
+
+        <span class="lifetime">&#39;outer</span>: <span class="kw">for _ in </span><span class="number">0</span>..rounds {
+            sim_board.clone_from(board);
+            <span class="kw">let </span><span class="kw-2">mut </span>sim_index = index;
+
+            <span class="kw">for </span>i <span class="kw">in </span>(<span class="number">0</span>..uv.len()).rev() {
+                <span class="kw">let </span>rand_i = rng.usize(<span class="number">0</span>..i + <span class="number">1</span>);
+                <span class="kw">let </span>rand = uv[rand_i];
+                uv[rand_i] = mem::replace(<span class="kw-2">&amp;mut </span>uv[i], rand);
+
+                sim_index += <span class="number">1</span>;
+                <span class="kw">if unsafe </span>{ sim_board.set_and_check_win(rand, stone(sim_index)) } {
+                    <span class="comment">// stone(sim_index) == stone(index)
+                    </span><span class="kw">if </span>(sim_index ^ index) &amp; <span class="number">2 </span>== <span class="number">0 </span>{
+                        wins += <span class="number">1</span>;
+                    }
+                    <span class="kw">continue </span><span class="lifetime">&#39;outer</span>;
+                }
+            }
+            draws += <span class="number">1</span>;
+        }
+        wins + draws / <span class="number">2
+    </span>}
 
     <span class="kw">fn </span>is_terminal(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
         <span class="self">self</span>.sure_win || <span class="self">self</span>.unvisited.is_empty()
@@ -741,4 +747,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="connect6" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.0-nightly (0468a00ae 2022-12-17)" data-search-js="search-444266647c4dba98.js" data-settings-js="settings-bebeae96e00e4617.js" data-settings-css="settings-58836c674e2f7bd2.css" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="connect6" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.0-nightly (d0dc9efff 2022-12-18)" data-search-js="search-444266647c4dba98.js" data-settings-js="settings-bebeae96e00e4617.js" data-settings-css="settings-58836c674e2f7bd2.css" ></div></body></html>
