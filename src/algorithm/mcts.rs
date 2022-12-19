@@ -334,7 +334,9 @@ impl Node {
             let mut sim_index = index;
 
             for i in (0..uv.len()).rev() {
-                let rand_i = rng.usize(0..i + 1);
+                // See: https://lemire.me/blog/2016/06/30/fast-random-shuffling/
+                // The slight bias is tolerable here.
+                let rand_i = ((rng.u64(..) as u128 * (i + 1) as u128) >> 64) as usize;
                 let rand = uv[rand_i];
                 uv[rand_i] = mem::replace(&mut uv[i], rand);
 
