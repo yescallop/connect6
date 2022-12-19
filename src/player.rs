@@ -12,7 +12,6 @@ use crate::{
     message::Event,
 };
 use async_trait::async_trait;
-use rand::prelude::*;
 use tokio::task;
 
 /// A trait for Connect6 players.
@@ -85,18 +84,18 @@ impl Player for Chaos {
 
 /// A player that uses Monte-Carlo tree search.
 pub struct Mcts<P: Policy> {
+    policy: P,
     rounds: u64,
     timeout: Duration,
-    policy: P,
 }
 
 impl<P: Policy> Mcts<P> {
     /// Creates a new `Mcts` with the given parameters.
     pub fn new(policy: P, rounds: u64, timeout: Duration) -> Self {
         Self {
+            policy,
             rounds,
             timeout,
-            policy,
         }
     }
 }
@@ -104,9 +103,8 @@ impl<P: Policy> Mcts<P> {
 #[async_trait]
 impl<P: Policy> Player for Mcts<P> {
     async fn attach(self, mut event_rx: Receiver<Event>, cmd_tx: CmdSender) {
-        let rounds = self.rounds;
         let timeout = self.timeout / 3;
-        let state = Arc::new(Mutex::new(MctsState::new(self.policy)));
+        let state = Arc::new(Mutex::new(MctsState::new(self.policy, self.rounds)));
 
         while let Some(event) = event_rx.recv().await {
             match event {
@@ -114,15 +112,14 @@ impl<P: Policy> Player for Mcts<P> {
                     let state = state.clone();
                     let mov = task::spawn_blocking(move || {
                         let mut state = state.lock().unwrap();
-                        let mut rng = SmallRng::from_entropy();
 
                         for _ in 0..2 {
-                            state.search(&mut rng, rounds, timeout);
+                            state.search(timeout);
                             let pair = state.peek();
                             println!("Tentative: ({}, {})", pair.0, pair.1);
                         }
 
-                        state.search(&mut rng, rounds, timeout);
+                        state.search(timeout);
                         state.peek()
                     })
                     .await

@@ -12,7 +12,7 @@ use connect6::{
 use tokio::task;
 
 const UCT_C: f64 = 0.056;
-const ROUNDS: u64 = 32;
+const ROUNDS: u64 = 64;
 const TIMEOUT: Duration = Duration::from_secs(60);
 
 #[tokio::main(flavor = "current_thread")]

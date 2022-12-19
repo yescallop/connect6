@@ -12,7 +12,7 @@ const DIAG_SIZE: usize = SIZE * 2 - 1;
 /// Use `RUSTFLAGS='-C target-cpu=native'` for maximum performance on your machine.
 ///
 /// The win check should be [very fast] if target feature `avx` or `sse4.1` is enabled.
-/// 
+///
 /// [very fast]: https://github.com/yescallop/connect6/blob/main/assets/check_win_avx_or_sse4.1.asm
 #[derive(Clone, Debug)]
 pub struct BitBoard {

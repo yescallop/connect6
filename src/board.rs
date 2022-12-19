@@ -68,7 +68,7 @@ impl Axis {
 /// This is required to avoid integer boundary checks.
 ///
 /// A `Point` must be checked to be inside the board before use.
-#[derive(Eq, PartialEq, Copy, Clone, Hash)]
+#[derive(Eq, PartialEq, PartialOrd, Ord, Copy, Clone, Hash)]
 pub struct Point {
     /// The horizontal coordinate.
     pub x: u32,

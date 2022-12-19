@@ -9,7 +9,6 @@ use std::{
 };
 
 use connect6::algorithm::mcts::{MctsState, Uct};
-use rand::prelude::*;
 
 fn main() {
     let mut c = 0.049;
@@ -38,12 +37,11 @@ fn main() {
 }
 
 fn test(c: f64) -> u32 {
-    let mut rng = SmallRng::from_entropy();
-    let mut state = MctsState::new(Uct(c));
+    let mut state = MctsState::new(Uct(c), 64);
     state.advance(Some(((9, 10).into(), (9, 11).into())));
     state.advance(Some(((8, 8).into(), (10, 10).into())));
     state.advance(Some(((9, 12).into(), (9, 13).into())));
-    state.search(&mut rng, 64, Duration::from_secs(20));
+    state.search(Duration::from_secs(20));
     let mov = state.peek();
     if mov.0 == (9, 14) || mov.0 == (9, 15) || mov.1 == (9, 14) || mov.1 == (9, 15) {
         1

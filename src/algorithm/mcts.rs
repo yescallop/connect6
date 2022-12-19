@@ -6,7 +6,7 @@ use std::{
 use super::{stone, BitBoard, SIZE};
 use crate::board::{Point, Stone};
 
-use rand::prelude::*;
+use fastrand::Rng;
 
 mod internal {
     use super::*;
@@ -53,7 +53,7 @@ impl Policy for Uct {
         node.children.iter_mut().max_by(|a, b| {
             let a = a.wins as f64 / a.sims as f64 + self.0 * (k / a.visits as f64).sqrt();
             let b = b.wins as f64 / b.sims as f64 + self.0 * (k / b.visits as f64).sqrt();
-            a.partial_cmp(&b).unwrap()
+            a.total_cmp(&b)
         })
     }
 }
@@ -67,13 +67,8 @@ pub struct MctsState<P: Policy> {
     path: Vec<*mut Node>,
     index: u32,
     policy: P,
-}
-
-struct Leaf<'a> {
-    node: &'a mut Node,
-    board: &'a mut BitBoard,
-    sim_board: &'a mut BitBoard,
-    index: u32,
+    rounds: u64,
+    rng: Rng,
 }
 
 impl fmt::Debug for Node {
@@ -90,7 +85,7 @@ impl fmt::Debug for Node {
 
 impl<P: Policy> MctsState<P> {
     /// Creates a new `MctsState`.
-    pub fn new(policy: P) -> Self {
+    pub fn new(policy: P, rounds: u64) -> Self {
         let size = SIZE as u32;
         let center = (size / 2, size / 2).into();
 
@@ -102,7 +97,7 @@ impl<P: Policy> MctsState<P> {
             .collect();
         unvisited.swap_remove(unvisited.len() / 2);
 
-        let mut root = Box::new(Node {
+        let root = Box::new(Node {
             point: center,
             wins: 0,
             sims: 0,
@@ -114,12 +109,14 @@ impl<P: Policy> MctsState<P> {
         });
 
         MctsState {
-            path: vec![&mut *root],
+            path: vec![],
             root,
             board,
             sim_board: BitBoard::new(),
             index: 1,
+            rounds,
             policy,
+            rng: Rng::new(),
         }
     }
 
@@ -129,16 +126,30 @@ impl<P: Policy> MctsState<P> {
     }
 
     /// Searches for the best moves within a certain amount of time.
-    pub fn search<R>(&mut self, rng: &mut R, rounds: u64, timeout: Duration)
-    where
-        R: Rng + ?Sized,
-    {
+    pub fn search(&mut self, timeout: Duration) {
         let deadline = Instant::now() + timeout;
         while Instant::now() < deadline {
-            let leaf = self.traverse();
-            let wins = leaf.simulate(rng, rounds);
-            self.back_propagate(rounds, wins);
+            self.search_once();
         }
+    }
+
+    /// Searches once for the best moves.
+    pub fn search_once(&mut self) {
+        let leaf = traverse(
+            &mut self.root,
+            &mut self.board,
+            &mut self.path,
+            &mut self.index,
+            &self.policy,
+        );
+        let wins = leaf.simulate(
+            &self.board,
+            &mut self.sim_board,
+            self.index,
+            &mut self.rng,
+            self.rounds,
+        );
+        self.back_propagate(wins);
     }
 
     /// Returns the currently best pair of moves, without affecting the state.
@@ -184,6 +195,7 @@ impl<P: Policy> MctsState<P> {
                 mov.0.x < size && mov.0.y < size && mov.1.x < size && mov.1.y < size,
                 "out of board"
             );
+            assert!(mov.0 != mov.1, "duplicate point");
 
             let stone = stone(self.index);
 
@@ -198,7 +210,7 @@ impl<P: Policy> MctsState<P> {
             self.root.point = mov.1;
             self.root.sure_win = unsafe {
                 self.board.set_and_check_win(mov.0, stone)
-                    || self.board.set_and_check_win(mov.1, stone)
+                    | self.board.set_and_check_win(mov.1, stone)
             };
 
             self.root.unvisited.retain(|&p| p != mov.0 && p != mov.1);
@@ -221,105 +233,60 @@ impl<P: Policy> MctsState<P> {
         false
     }
 
-    fn traverse(&mut self) -> Leaf<'_> {
-        let mut node = &mut *self.root;
+    fn back_propagate(&mut self, mut wins: u64) {
+        for ptr in self.path.drain(..).rev() {
+            let node = unsafe { &mut *ptr };
 
-        while node.unvisited.len() as u32 == node.visited {
-            if node.children.is_empty() {
-                break;
-            }
-
-            node = self.policy.peek_best(node).unwrap();
-            self.path.push(node);
-
-            self.index += 1;
-            unsafe { self.board.set(node.point, stone(self.index)) }
-        }
-
-        if !node.is_terminal() {
-            node = node.expand();
-            self.path.push(node);
-
-            self.index += 1;
-            node.sure_win = unsafe { self.board.set_and_check_win(node.point, stone(self.index)) };
-        }
-
-        Leaf {
-            node,
-            board: &mut self.board,
-            sim_board: &mut self.sim_board,
-            index: self.index,
-        }
-    }
-
-    fn back_propagate(&mut self, rounds: u64, mut wins: u64) {
-        let (&node, path) = self.path.split_last().unwrap();
-        let mut node = unsafe { &mut *node };
-
-        node.wins += wins;
-        node.sims += rounds;
-        node.visits += 1;
-        unsafe { self.board.remove(node.point, stone(self.index)) }
-
-        for node_i in (0..path.len()).rev() {
-            if self.index & 1 == 0 {
-                wins = rounds - wins;
-            }
-            self.index -= 1;
-
-            unsafe { node = &mut *path[node_i] }
             node.wins += wins;
-            node.sims += rounds;
+            node.sims += self.rounds;
             node.visits += 1;
 
-            if node_i != 0 {
-                // Don't remove the stone for the root.
-                unsafe { self.board.remove(node.point, stone(self.index)) }
+            if self.index & 1 == 0 {
+                wins = self.rounds - wins;
             }
+
+            unsafe { self.board.remove(node.point, stone(self.index)) }
+            self.index -= 1;
         }
 
-        self.path.truncate(1);
+        self.root.wins += wins;
+        self.root.sims += self.rounds;
+        self.root.visits += 1;
     }
 }
 
 unsafe impl<P: Policy> Send for MctsState<P> {}
 unsafe impl<P: Policy> Sync for MctsState<P> {}
 
-impl<'a> Leaf<'a> {
-    fn simulate<R>(self, rng: &mut R, rounds: u64) -> u64
-    where
-        R: Rng + ?Sized,
-    {
-        if self.node.sure_win {
-            return rounds;
+fn traverse<'a>(
+    root: &'a mut Node,
+    board: &mut BitBoard,
+    path: &mut Vec<*mut Node>,
+    index: &mut u32,
+    policy: &impl Policy,
+) -> &'a mut Node {
+    let mut node = &mut *root;
+
+    while node.unvisited.len() as u32 == node.visited {
+        if node.children.is_empty() {
+            break;
         }
 
-        let uv = &mut self.node.unvisited[..];
-        let len = uv.len() as u32;
-        let mut wins = 0;
-        let mut draws = 0;
+        node = policy.peek_best(node).unwrap();
+        path.push(node);
 
-        'outer: for _ in 0..rounds {
-            self.sim_board.clone_from(self.board);
-            let mut index = self.index;
-
-            for i in (1..len).rev() {
-                let rand_i = rng.gen_range(0..i + 1) as usize;
-                let rand = uv[rand_i];
-                uv[rand_i] = mem::replace(&mut uv[i as usize], rand);
-
-                index += 1;
-                if unsafe { self.sim_board.set_and_check_win(rand, stone(index)) } {
-                    if stone(index) == stone(self.index) {
-                        wins += 1;
-                    }
-                    continue 'outer;
-                }
-            }
-            draws += 1;
-        }
-        wins + draws / 2
+        *index += 1;
+        unsafe { board.set(node.point, stone(*index)) }
     }
+
+    if !node.is_terminal() {
+        node = node.expand();
+        path.push(node);
+
+        *index += 1;
+        node.sure_win = unsafe { board.set_and_check_win(node.point, stone(*index)) };
+    }
+    node
 }
 
 impl Node {
@@ -328,11 +295,8 @@ impl Node {
         self.visited += 1;
 
         let point = self.unvisited[i];
-        let unvisited: Vec<_> = self.unvisited[..i]
-            .iter()
-            .chain(&self.unvisited[i + 1..])
-            .copied()
-            .collect();
+        let mut unvisited = self.unvisited.clone();
+        unvisited.swap_remove(i);
 
         let child = Node {
             point,
@@ -347,6 +311,45 @@ impl Node {
 
         self.children.push(child);
         self.children.last_mut().unwrap()
+    }
+
+    fn simulate(
+        &mut self,
+        board: &BitBoard,
+        sim_board: &mut BitBoard,
+        index: u32,
+        rng: &mut Rng,
+        rounds: u64,
+    ) -> u64 {
+        if self.sure_win {
+            return rounds;
+        }
+
+        let uv = &mut self.unvisited[..];
+        let mut wins = 0;
+        let mut draws = 0;
+
+        'outer: for _ in 0..rounds {
+            sim_board.clone_from(board);
+            let mut sim_index = index;
+
+            for i in (0..uv.len()).rev() {
+                let rand_i = rng.usize(0..i + 1);
+                let rand = uv[rand_i];
+                uv[rand_i] = mem::replace(&mut uv[i], rand);
+
+                sim_index += 1;
+                if unsafe { sim_board.set_and_check_win(rand, stone(sim_index)) } {
+                    // stone(sim_index) == stone(index)
+                    if (sim_index ^ index) & 2 == 0 {
+                        wins += 1;
+                    }
+                    continue 'outer;
+                }
+            }
+            draws += 1;
+        }
+        wins + draws / 2
     }
 
     fn is_terminal(&self) -> bool {

@@ -6,7 +6,6 @@ use connect6::{
     message::{Cmd, FullCmd},
     Builder, Handle,
 };
-use rand::prelude::*;
 use tokio::task;
 
 const ROUNDS: u64 = 64;
@@ -20,17 +19,16 @@ async fn main() {
         ctrl,
     } = Builder::new().build();
     let search = task::spawn_blocking(move || {
-        let mut state = MctsState::new(Pure);
-        let mut rng = SmallRng::from_entropy();
+        let mut state = MctsState::new(Pure, ROUNDS);
 
         while !state.is_terminal() {
             for _ in 0..2 {
-                state.search(&mut rng, ROUNDS, TIMEOUT);
+                state.search(TIMEOUT);
                 let pair = state.peek();
                 println!("Tentative: ({}, {})", pair.0, pair.1);
             }
 
-            state.search(&mut rng, ROUNDS, TIMEOUT);
+            state.search(TIMEOUT);
             let cmd = FullCmd {
                 cmd: Cmd::Move(Some(state.pop())),
                 stone: None,
