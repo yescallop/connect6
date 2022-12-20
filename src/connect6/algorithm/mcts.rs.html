@@ -374,6 +374,10 @@
 <a href="#374" id="374">374</a>
 <a href="#375" id="375">375</a>
 <a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::{
     fmt, mem,
     time::{Duration, Instant},
@@ -500,15 +504,17 @@
     }
 
     <span class="doccomment">/// Searches for the best moves within a certain amount of time.
-    </span><span class="kw">pub fn </span>search(<span class="kw-2">&amp;mut </span><span class="self">self</span>, timeout: Duration) {
+    </span><span class="kw">pub fn </span>search(<span class="kw-2">&amp;mut </span><span class="self">self</span>, timeout: Duration) -&gt; usize {
         <span class="kw">let </span>deadline = Instant::now() + timeout;
+        <span class="kw">let </span><span class="kw-2">mut </span>depth = <span class="number">0</span>;
         <span class="kw">while </span>Instant::now() &lt; deadline {
-            <span class="self">self</span>.search_once();
+            depth = depth.max(<span class="self">self</span>.search_once());
         }
+        depth
     }
 
     <span class="doccomment">/// Searches once for the best moves.
-    </span><span class="kw">pub fn </span>search_once(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+    </span><span class="kw">pub fn </span>search_once(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; usize {
         <span class="kw">let </span>leaf = traverse(
             <span class="kw-2">&amp;mut </span><span class="self">self</span>.root,
             <span class="kw-2">&amp;mut </span><span class="self">self</span>.board,
@@ -523,7 +529,9 @@
             <span class="kw-2">&amp;</span><span class="self">self</span>.rng,
             <span class="self">self</span>.rounds,
         );
+        <span class="kw">let </span>depth = <span class="self">self</span>.path.len();
         <span class="self">self</span>.back_propagate(wins);
+        depth
     }
 
     <span class="doccomment">/// Returns the currently best pair of moves, without affecting the state.
