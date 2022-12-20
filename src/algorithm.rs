@@ -217,14 +217,13 @@ impl BitBoard {
 #[cfg(not(target_arch = "x86_64"))]
 #[inline]
 fn detect_six(arr: [u32; 4]) -> bool {
+    let mut has_six = false;
     for mut v in arr {
         v &= v >> 1;
         v &= v >> 2;
-        if v & (v >> 2) != 0 {
-            return true;
-        }
+        has_six |= v & (v >> 2) != 0;
     }
-    false
+    has_six
 }
 
 #[cfg(target_arch = "x86_64")]

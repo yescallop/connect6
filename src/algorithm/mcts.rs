@@ -124,15 +124,17 @@ impl<P: Policy> MctsState<P> {
     }
 
     /// Searches for the best moves within a certain amount of time.
-    pub fn search(&mut self, timeout: Duration) {
+    pub fn search(&mut self, timeout: Duration) -> usize {
         let deadline = Instant::now() + timeout;
+        let mut depth = 0;
         while Instant::now() < deadline {
-            self.search_once();
+            depth = depth.max(self.search_once());
         }
+        depth
     }
 
     /// Searches once for the best moves.
-    pub fn search_once(&mut self) {
+    pub fn search_once(&mut self) -> usize {
         let leaf = traverse(
             &mut self.root,
             &mut self.board,
@@ -147,7 +149,9 @@ impl<P: Policy> MctsState<P> {
             &self.rng,
             self.rounds,
         );
+        let depth = self.path.len();
         self.back_propagate(wins);
+        depth
     }
 
     /// Returns the currently best pair of moves, without affecting the state.
