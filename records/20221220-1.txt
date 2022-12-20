@@ -1,4 +1,4 @@
-Played with UCT-MCTS (C=0.03, R=64, T=60s) (Black) on Tue, 20 Dec 2022 13:30 GMT+8
+Played with UCT-MCTS (C=0.03, R=64, T=60s) (White) on Tue, 20 Dec 2022 13:30 GMT+8
 ------- PLAY WITH MCTS -------
 Choose your stone (0 for White, Black otherwise):
 ------- GAME SETTINGS --------

@@ -115,13 +115,13 @@ impl<P: Policy> Player for Mcts<P> {
 
                         for _ in 0..2 {
                             let depth = state.search(timeout);
-                            println!("Max depth: {depth}");
+                            print!("[Depth {depth}] ");
                             let pair = state.peek();
                             println!("Tentative: ({}, {})", pair.0, pair.1);
                         }
 
                         let depth = state.search(timeout);
-                        println!("Max depth: {depth}");
+                        print!("[Depth {depth}] ");
                         state.peek()
                     })
                     .await
