@@ -379,10 +379,8 @@
     time::{Duration, Instant},
 };
 
-<span class="kw">use super</span>::{stone, BitBoard, SIZE};
+<span class="kw">use super</span>::{rng::Rng, stone, BitBoard, SIZE};
 <span class="kw">use </span><span class="kw">crate</span>::board::{Point, Stone};
-
-<span class="kw">use </span>fastrand::Rng;
 
 <span class="kw">mod </span>internal {
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
@@ -522,7 +520,7 @@
             <span class="kw-2">&amp;</span><span class="self">self</span>.board,
             <span class="kw-2">&amp;mut </span><span class="self">self</span>.sim_board,
             <span class="self">self</span>.index,
-            <span class="kw-2">&amp;mut </span><span class="self">self</span>.rng,
+            <span class="kw-2">&amp;</span><span class="self">self</span>.rng,
             <span class="self">self</span>.rounds,
         );
         <span class="self">self</span>.back_propagate(wins);
@@ -694,7 +692,7 @@
         board: <span class="kw-2">&amp;</span>BitBoard,
         sim_board: <span class="kw-2">&amp;mut </span>BitBoard,
         index: u32,
-        rng: <span class="kw-2">&amp;mut </span>Rng,
+        rng: <span class="kw-2">&amp;</span>Rng,
         rounds: u64,
     ) -&gt; u64 {
         <span class="kw">if </span><span class="self">self</span>.sure_win {
@@ -706,23 +704,25 @@
         <span class="kw">let </span><span class="kw-2">mut </span>draws = <span class="number">0</span>;
 
         <span class="lifetime">&#39;outer</span>: <span class="kw">for _ in </span><span class="number">0</span>..rounds {
-            sim_board.clone_from(board);
+            sim_board.copy_from(<span class="kw-2">&amp;</span>board);
             <span class="kw">let </span><span class="kw-2">mut </span>sim_index = index;
 
             <span class="kw">for </span>i <span class="kw">in </span>(<span class="number">0</span>..uv.len()).rev() {
-                <span class="comment">// See: https://lemire.me/blog/2016/06/30/fast-random-shuffling/
-                // The slight bias is tolerable here.
-                </span><span class="kw">let </span>rand_i = ((rng.u64(..) <span class="kw">as </span>u128 * (i + <span class="number">1</span>) <span class="kw">as </span>u128) &gt;&gt; <span class="number">64</span>) <span class="kw">as </span>usize;
-                <span class="kw">let </span>rand = uv[rand_i];
-                uv[rand_i] = mem::replace(<span class="kw-2">&amp;mut </span>uv[i], rand);
-
                 sim_index += <span class="number">1</span>;
-                <span class="kw">if unsafe </span>{ sim_board.set_and_check_win(rand, stone(sim_index)) } {
-                    <span class="comment">// stone(sim_index) == stone(index)
-                    </span><span class="kw">if </span>(sim_index ^ index) &amp; <span class="number">2 </span>== <span class="number">0 </span>{
-                        wins += <span class="number">1</span>;
+
+                <span class="kw">let </span>rand_i = rng.gen_index(i + <span class="number">1</span>);
+                <span class="kw">unsafe </span>{
+                    <span class="kw">let </span>rand_ptr = uv.as_mut_ptr().add(rand_i);
+                    <span class="kw">let </span>rand_point = <span class="kw-2">*</span>rand_ptr;
+                    <span class="kw-2">*</span>rand_ptr = mem::replace(uv.get_unchecked_mut(i), rand_point);
+
+                    <span class="kw">if </span>sim_board.set_and_check_win(rand_point, stone(sim_index)) {
+                        <span class="comment">// stone(sim_index) == stone(index)
+                        </span><span class="kw">if </span>(sim_index ^ index) &amp; <span class="number">2 </span>== <span class="number">0 </span>{
+                            wins += <span class="number">1</span>;
+                        }
+                        <span class="kw">continue </span><span class="lifetime">&#39;outer</span>;
                     }
-                    <span class="kw">continue </span><span class="lifetime">&#39;outer</span>;
                 }
             }
             draws += <span class="number">1</span>;
@@ -751,4 +751,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="connect6" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.0-nightly (d0dc9efff 2022-12-18)" data-search-js="search-444266647c4dba98.js" data-settings-js="settings-bebeae96e00e4617.js" data-settings-css="settings-58836c674e2f7bd2.css" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="connect6" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.0-nightly (935dc0721 2022-12-19)" data-search-js="search-444266647c4dba98.js" data-settings-js="settings-bebeae96e00e4617.js" data-settings-css="settings-58836c674e2f7bd2.css" ></div></body></html>
