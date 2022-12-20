@@ -1,4 +1,7 @@
-use std::alloc::{self, Layout};
+use std::{
+    alloc::{self, Layout},
+    ptr,
+};
 
 use crate::board::{Point, Stone};
 
@@ -44,6 +47,14 @@ impl BitBoard {
         }
         // SAFETY: `ptr` is allocated with `Global` and a correct layout.
         unsafe { Box::from_raw(ptr.cast()) }
+    }
+
+    /// Copies from another `BitBoard`.
+    #[inline]
+    pub fn copy_from(&mut self, src: &BitBoard) {
+        unsafe {
+            ptr::copy_nonoverlapping(src, self, 1);
+        }
     }
 
     /// Returns `true` if there is a stone at the point.
@@ -238,3 +249,5 @@ fn stone(index: u32) -> Stone {
 
 /// Implementations of Monte-Carlo tree search (MCTS).
 pub mod mcts;
+
+mod rng;

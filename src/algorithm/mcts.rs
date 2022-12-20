@@ -3,10 +3,8 @@ use std::{
     time::{Duration, Instant},
 };
 
-use super::{stone, BitBoard, SIZE};
+use super::{rng::Rng, stone, BitBoard, SIZE};
 use crate::board::{Point, Stone};
-
-use fastrand::Rng;
 
 mod internal {
     use super::*;
@@ -146,7 +144,7 @@ impl<P: Policy> MctsState<P> {
             &self.board,
             &mut self.sim_board,
             self.index,
-            &mut self.rng,
+            &self.rng,
             self.rounds,
         );
         self.back_propagate(wins);
@@ -318,7 +316,7 @@ impl Node {
         board: &BitBoard,
         sim_board: &mut BitBoard,
         index: u32,
-        rng: &mut Rng,
+        rng: &Rng,
         rounds: u64,
     ) -> u64 {
         if self.sure_win {
@@ -330,23 +328,25 @@ impl Node {
         let mut draws = 0;
 
         'outer: for _ in 0..rounds {
-            sim_board.clone_from(board);
+            sim_board.copy_from(&board);
             let mut sim_index = index;
 
             for i in (0..uv.len()).rev() {
-                // See: https://lemire.me/blog/2016/06/30/fast-random-shuffling/
-                // The slight bias is tolerable here.
-                let rand_i = ((rng.u64(..) as u128 * (i + 1) as u128) >> 64) as usize;
-                let rand = uv[rand_i];
-                uv[rand_i] = mem::replace(&mut uv[i], rand);
-
                 sim_index += 1;
-                if unsafe { sim_board.set_and_check_win(rand, stone(sim_index)) } {
-                    // stone(sim_index) == stone(index)
-                    if (sim_index ^ index) & 2 == 0 {
-                        wins += 1;
+
+                let rand_i = rng.gen_index(i + 1);
+                unsafe {
+                    let rand_ptr = uv.as_mut_ptr().add(rand_i);
+                    let rand_point = *rand_ptr;
+                    *rand_ptr = mem::replace(uv.get_unchecked_mut(i), rand_point);
+
+                    if sim_board.set_and_check_win(rand_point, stone(sim_index)) {
+                        // stone(sim_index) == stone(index)
+                        if (sim_index ^ index) & 2 == 0 {
+                            wins += 1;
+                        }
+                        continue 'outer;
                     }
-                    continue 'outer;
                 }
             }
             draws += 1;
