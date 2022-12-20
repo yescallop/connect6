@@ -258,13 +258,13 @@
 
                         <span class="kw">for _ in </span><span class="number">0</span>..<span class="number">2 </span>{
                             <span class="kw">let </span>depth = state.search(timeout);
-                            <span class="macro">println!</span>(<span class="string">&quot;Max depth: {depth}&quot;</span>);
+                            <span class="macro">print!</span>(<span class="string">&quot;[Depth {depth}] &quot;</span>);
                             <span class="kw">let </span>pair = state.peek();
                             <span class="macro">println!</span>(<span class="string">&quot;Tentative: ({}, {})&quot;</span>, pair.<span class="number">0</span>, pair.<span class="number">1</span>);
                         }
 
                         <span class="kw">let </span>depth = state.search(timeout);
-                        <span class="macro">println!</span>(<span class="string">&quot;Max depth: {depth}&quot;</span>);
+                        <span class="macro">print!</span>(<span class="string">&quot;[Depth {depth}] &quot;</span>);
                         state.peek()
                     })
                     .<span class="kw">await
