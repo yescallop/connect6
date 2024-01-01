@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":[["SIZE","The board size used by the algorithms in this module."]],"mod":[["mcts","Implementations of Monte-Carlo tree search (MCTS)."]],"struct":[["BitBoard","A bit-packed Connect6 board with optimized win checking algorithm."]]};
+window.SIDEBAR_ITEMS = {"constant":["SIZE"],"mod":["mcts"],"struct":["BitBoard"]};

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["log","Logs the game events in the console."],["read_move","Reads a move from the console."]]};
+window.SIDEBAR_ITEMS = {"fn":["log","read_move"]};

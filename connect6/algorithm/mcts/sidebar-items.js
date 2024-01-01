@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["MctsState","A state for Monte-Carlo tree search (MCTS)."],["Pure","Pure MCTS policy."],["Uct","UCT-based MCTS policy."]],"trait":[["Policy","A policy for MCTS."]]};
+window.SIDEBAR_ITEMS = {"struct":["MctsState","Pure","Uct"],"trait":["Policy"]};

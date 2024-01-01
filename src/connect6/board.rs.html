@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/board.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>board.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-64113db173fe9e58.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../static.files/light-8fe2cf7ee64a76fb.css"><link rel="stylesheet" disabled href="../../static.files/dark-7aacebe982779e9a.css"><link rel="stylesheet" disabled href="../../static.files/ayu-29dcc614f7a7b461.css"><script id="default-settings" ></script><script src="../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../static.files/source-script-ea63cb6500f71309.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-a211dbb005fb8161.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../connect6/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/board.rs`."><title>board.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-bf502f66ec635d5d.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="connect6" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (e51e98dde 2023-12-31)" data-channel="nightly" data-search-js="search-c17e98913a53b3b7.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-0b2e2def73e61cbe.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../connect6/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -599,7 +601,7 @@
 <a href="#599" id="599">599</a>
 <a href="#600" id="600">600</a>
 <a href="#601" id="601">601</a>
-</pre><pre class="rust"><code><span class="kw">use </span>std::{
+</pre></div><pre class="rust"><code><span class="kw">use </span>std::{
     alloc::{<span class="self">self</span>, Layout},
     fmt, mem,
     ops::{Index, IndexMut},
@@ -627,10 +629,10 @@
 }
 
 <span class="kw">impl </span>fmt::Display <span class="kw">for </span>Stone {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
         f.write_str(<span class="kw">match </span><span class="self">self </span>{
-            Stone::Black =&gt; <span class="string">&quot;Black ●&quot;</span>,
-            Stone::White =&gt; <span class="string">&quot;White ○&quot;</span>,
+            Stone::Black =&gt; <span class="string">"Black ●"</span>,
+            Stone::White =&gt; <span class="string">"White ○"</span>,
         })
     }
 }
@@ -714,16 +716,16 @@
 
 <span class="kw">impl </span>fmt::Display <span class="kw">for </span>Point {
     <span class="doccomment">/// Formats a `Point` as a point reference.
-    </span><span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
+    </span><span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
         <span class="kw">if </span><span class="self">self</span>.x &lt; <span class="number">26 </span>{
-            <span class="kw">return </span><span class="macro">write!</span>(f, <span class="string">&quot;{}{}&quot;</span>, (<span class="string">b&#39;A&#39; </span>+ <span class="self">self</span>.x <span class="kw">as </span>u8) <span class="kw">as </span>char, <span class="self">self</span>.y + <span class="number">1</span>);
+            <span class="kw">return </span><span class="macro">write!</span>(f, <span class="string">"{}{}"</span>, (<span class="string">b'A' </span>+ <span class="self">self</span>.x <span class="kw">as </span>u8) <span class="kw">as </span>char, <span class="self">self</span>.y + <span class="number">1</span>);
         }
 
         <span class="kw">let </span><span class="kw-2">mut </span>arr = [<span class="number">0</span>; <span class="number">7</span>];
         <span class="kw">let </span><span class="kw-2">mut </span>x = <span class="self">self</span>.x;
         <span class="kw">let </span><span class="kw-2">mut </span>i = <span class="number">6</span>;
         <span class="kw">loop </span>{
-            arr[i] = <span class="string">b&#39;A&#39; </span>+ (x % <span class="number">26</span>) <span class="kw">as </span>u8;
+            arr[i] = <span class="string">b'A' </span>+ (x % <span class="number">26</span>) <span class="kw">as </span>u8;
             x = <span class="kw">match </span>(x / <span class="number">26</span>).checked_sub(<span class="number">1</span>) {
                 <span class="prelude-val">Some</span>(x) =&gt; x,
                 <span class="prelude-val">None </span>=&gt; <span class="kw">break</span>,
@@ -733,7 +735,7 @@
 
         <span class="macro">write!</span>(
             f,
-            <span class="string">&quot;{}{}&quot;</span>,
+            <span class="string">"{}{}"</span>,
             <span class="comment">// SAFETY: The bytes are all ASCII and thus valid UTF-8.
             </span><span class="kw">unsafe </span>{ str::from_utf8_unchecked(<span class="kw-2">&amp;</span>arr[i..]) },
             <span class="self">self</span>.y + <span class="number">1</span>,
@@ -742,13 +744,13 @@
 }
 
 <span class="kw">impl </span>fmt::Debug <span class="kw">for </span>Point {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
-        <span class="macro">write!</span>(f, <span class="string">&quot;({},{})&quot;</span>, <span class="self">self</span>.x, <span class="self">self</span>.y)
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
+        <span class="macro">write!</span>(f, <span class="string">"({},{})"</span>, <span class="self">self</span>.x, <span class="self">self</span>.y)
     }
 }
 
 <span class="attr">#[derive(thiserror::Error, Debug, PartialEq, Eq)]
-#[error(<span class="string">&quot;invalid point reference&quot;</span>)]
+#[error(<span class="string">"invalid point reference"</span>)]
 </span><span class="doccomment">/// An error which can be returned when parsing a point.
 </span><span class="kw">pub struct </span>ParsePointError;
 
@@ -761,15 +763,15 @@
     ///
     /// ```
     /// use connect6::board::Point;
-    /// assert_eq!(&quot;A1&quot;.parse(), Ok(Point::new(0, 0)));
-    /// assert_eq!(&quot;h7&quot;.parse(), Ok(Point::new(7, 6)));
-    /// assert_eq!(&quot;xFD11&quot;.parse(), Ok(Point::new(16383, 10)));
+    /// assert_eq!("A1".parse(), Ok(Point::new(0, 0)));
+    /// assert_eq!("h7".parse(), Ok(Point::new(7, 6)));
+    /// assert_eq!("xFD11".parse(), Ok(Point::new(16383, 10)));
     /// ```
     </span><span class="kw">fn </span>from_str(s: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Err&gt; {
         <span class="kw">fn </span>alpha_to_num(b: <span class="kw-2">&amp;</span>u8) -&gt; <span class="prelude-ty">Option</span>&lt;i32&gt; {
             <span class="kw">match </span>b {
-                <span class="string">b&#39;a&#39;</span>..=<span class="string">b&#39;z&#39; </span>=&gt; <span class="prelude-val">Some</span>((b - <span class="string">b&#39;a&#39;</span>) <span class="kw">as </span>i32),
-                <span class="string">b&#39;A&#39;</span>..=<span class="string">b&#39;Z&#39; </span>=&gt; <span class="prelude-val">Some</span>((b - <span class="string">b&#39;A&#39;</span>) <span class="kw">as </span>i32),
+                <span class="string">b'a'</span>..=<span class="string">b'z' </span>=&gt; <span class="prelude-val">Some</span>((b - <span class="string">b'a'</span>) <span class="kw">as </span>i32),
+                <span class="string">b'A'</span>..=<span class="string">b'Z' </span>=&gt; <span class="prelude-val">Some</span>((b - <span class="string">b'A'</span>) <span class="kw">as </span>i32),
                 <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
             }
         }
@@ -784,8 +786,8 @@
             <span class="kw">let </span><span class="kw-2">mut </span>i = <span class="number">1</span>;
 
             <span class="kw">while let </span><span class="prelude-val">Some</span>(n) = bytes.get(i).and_then(alpha_to_num) {
-                <span class="comment">// If the addition of 1 wasn&#39;t checked, it would overflow when `x == i32::MAX`,
-                // that is when the string starts with &quot;FXSHRXX&quot;.
+                <span class="comment">// If the addition of 1 wasn't checked, it would overflow when `x == i32::MAX`,
+                // that is when the string starts with "FXSHRXX".
                 </span>x = x.checked_add(<span class="number">1</span>)<span class="question-mark">?</span>.checked_mul(<span class="number">26</span>)<span class="question-mark">?</span>.checked_add(n)<span class="question-mark">?</span>;
                 i += <span class="number">1</span>;
             }
@@ -817,7 +819,7 @@
 <span class="kw">impl </span>From&lt;<span class="prelude-ty">Option</span>&lt;Stone&gt;&gt; <span class="kw">for </span>OptStone {
     <span class="attr">#[inline]
     </span><span class="kw">fn </span>from(o: <span class="prelude-ty">Option</span>&lt;Stone&gt;) -&gt; OptStone {
-        <span class="comment">// A safe match doesn&#39;t get optimized out.
+        <span class="comment">// A safe match doesn't get optimized out.
         </span><span class="kw">match </span>o {
             <span class="prelude-val">None </span>=&gt; OptStone::None,
             <span class="comment">// SAFETY: `1u8` and `2u8` are both valid as `OptStone`.
@@ -1005,11 +1007,11 @@
     /// Panics when moving out of board or into an occupied slot.
     </span><span class="kw">pub fn </span>make_move(<span class="kw-2">&amp;mut </span><span class="self">self</span>, mov: (Point, Point), stone: Stone) {
         <span class="kw">let </span>slot = <span class="kw-2">&amp;mut </span><span class="self">self</span>[mov.<span class="number">0</span>];
-        <span class="macro">assert!</span>(slot.is_empty(), <span class="string">&quot;moving into an occupied slot&quot;</span>);
+        <span class="macro">assert!</span>(slot.is_empty(), <span class="string">"moving into an occupied slot"</span>);
         slot.set_stone(<span class="prelude-val">Some</span>(stone));
 
         <span class="kw">let </span>slot = <span class="kw-2">&amp;mut </span><span class="self">self</span>[mov.<span class="number">1</span>];
-        <span class="macro">assert!</span>(slot.is_empty(), <span class="string">&quot;moving into an occupied slot&quot;</span>);
+        <span class="macro">assert!</span>(slot.is_empty(), <span class="string">"moving into an occupied slot"</span>);
         slot.set_stone(<span class="prelude-val">Some</span>(stone));
 
         <span class="self">self</span>.move_index += <span class="number">2</span>;
@@ -1063,39 +1065,39 @@
 
     <span class="attr">#[inline]
     </span><span class="kw">fn </span>index(<span class="kw-2">&amp;</span><span class="self">self</span>, p: P) -&gt; <span class="kw-2">&amp;</span>Slot {
-        <span class="self">self</span>.get(p.into()).expect(<span class="string">&quot;out of board&quot;</span>)
+        <span class="self">self</span>.get(p.into()).expect(<span class="string">"out of board"</span>)
     }
 }
 
 <span class="kw">impl</span>&lt;P: Into&lt;Point&gt;&gt; IndexMut&lt;P&gt; <span class="kw">for </span>Board {
     <span class="attr">#[inline]
     </span><span class="kw">fn </span>index_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, p: P) -&gt; <span class="kw-2">&amp;mut </span>Slot {
-        <span class="self">self</span>.get_mut(p.into()).expect(<span class="string">&quot;out of board&quot;</span>)
+        <span class="self">self</span>.get_mut(p.into()).expect(<span class="string">"out of board"</span>)
     }
 }
 
 <span class="kw">impl </span>fmt::Display <span class="kw">for </span>Board {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
         <span class="kw">let </span>size = <span class="self">self</span>.size;
         <span class="kw">if </span>size &gt; <span class="number">26 </span>{
-            <span class="kw">return </span><span class="macro">write!</span>(f, <span class="string">&quot;Board(size={})&quot;</span>, size);
+            <span class="kw">return </span><span class="macro">write!</span>(f, <span class="string">"Board(size={})"</span>, size);
         }
         <span class="kw">for </span>y <span class="kw">in </span>(<span class="number">0</span>..size).rev() {
-            <span class="macro">write!</span>(f, <span class="string">&quot;{:&gt;2}&quot;</span>, y + <span class="number">1</span>)<span class="question-mark">?</span>;
+            <span class="macro">write!</span>(f, <span class="string">"{:&gt;2}"</span>, y + <span class="number">1</span>)<span class="question-mark">?</span>;
             <span class="kw">for </span>x <span class="kw">in </span><span class="number">0</span>..size {
                 <span class="kw">let </span>slot = <span class="kw-2">&amp;</span><span class="self">self</span>[(x, y)];
                 <span class="kw">let </span>char = <span class="kw">match </span>slot.stone() {
-                    <span class="prelude-val">Some</span>(Stone::Black) =&gt; <span class="string">&#39;●&#39;</span>,
-                    <span class="prelude-val">Some</span>(Stone::White) =&gt; <span class="string">&#39;○&#39;</span>,
-                    <span class="prelude-val">None </span>=&gt; <span class="string">&#39;-&#39;</span>,
+                    <span class="prelude-val">Some</span>(Stone::Black) =&gt; <span class="string">'●'</span>,
+                    <span class="prelude-val">Some</span>(Stone::White) =&gt; <span class="string">'○'</span>,
+                    <span class="prelude-val">None </span>=&gt; <span class="string">'-'</span>,
                 };
-                <span class="macro">write!</span>(f, <span class="string">&quot; {}&quot;</span>, char)<span class="question-mark">?</span>;
+                <span class="macro">write!</span>(f, <span class="string">" {}"</span>, char)<span class="question-mark">?</span>;
             }
             <span class="macro">writeln!</span>(f)<span class="question-mark">?</span>;
         }
-        <span class="macro">write!</span>(f, <span class="string">&quot;  &quot;</span>)<span class="question-mark">?</span>;
+        <span class="macro">write!</span>(f, <span class="string">"  "</span>)<span class="question-mark">?</span>;
         <span class="kw">for </span>x <span class="kw">in </span><span class="number">0</span>..size {
-            <span class="macro">write!</span>(f, <span class="string">&quot; {}&quot;</span>, (<span class="string">b&#39;A&#39; </span>+ x <span class="kw">as </span>u8) <span class="kw">as </span>char)<span class="question-mark">?</span>;
+            <span class="macro">write!</span>(f, <span class="string">" {}"</span>, (<span class="string">b'A' </span>+ x <span class="kw">as </span>u8) <span class="kw">as </span>char)<span class="question-mark">?</span>;
         }
         <span class="prelude-val">Ok</span>(())
     }
@@ -1113,12 +1115,12 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>point_fmt_parse() {
-        <span class="macro">assert_eq!</span>(Point::new(<span class="number">0</span>, <span class="number">0</span>).to_string(), <span class="string">&quot;A1&quot;</span>);
-        <span class="macro">assert_eq!</span>(Point::new(<span class="number">7</span>, <span class="number">6</span>).to_string(), <span class="string">&quot;H7&quot;</span>);
-        <span class="macro">assert_eq!</span>(Point::new(<span class="number">16383</span>, <span class="number">127</span>).to_string(), <span class="string">&quot;XFD128&quot;</span>);
+        <span class="macro">assert_eq!</span>(Point::new(<span class="number">0</span>, <span class="number">0</span>).to_string(), <span class="string">"A1"</span>);
+        <span class="macro">assert_eq!</span>(Point::new(<span class="number">7</span>, <span class="number">6</span>).to_string(), <span class="string">"H7"</span>);
+        <span class="macro">assert_eq!</span>(Point::new(<span class="number">16383</span>, <span class="number">127</span>).to_string(), <span class="string">"XFD128"</span>);
 
         <span class="kw">let </span>max = Point::new(i32::MAX <span class="kw">as _</span>, i32::MAX <span class="kw">as _</span>);
-        <span class="kw">let </span>max_s = <span class="string">&quot;FXSHRXX2147483648&quot;</span>;
+        <span class="kw">let </span>max_s = <span class="string">"FXSHRXX2147483648"</span>;
         <span class="macro">assert_eq!</span>(max.to_string(), max_s);
         <span class="macro">assert_eq!</span>(max_s.parse(), <span class="prelude-val">Ok</span>(max));
 
@@ -1127,14 +1129,14 @@
             <span class="macro">assert_eq!</span>(p.to_string().parse(), <span class="prelude-val">Ok</span>(p));
         }
 
-        <span class="macro">assert!</span>(Point::from_str(<span class="string">&quot;A&quot;</span>).is_err());
-        <span class="macro">assert!</span>(Point::from_str(<span class="string">&quot;1&quot;</span>).is_err());
-        <span class="macro">assert!</span>(Point::from_str(<span class="string">&quot;A0&quot;</span>).is_err());
-        <span class="macro">assert!</span>(Point::from_str(<span class="string">&quot;A2147483649&quot;</span>).is_err());
-        <span class="macro">assert!</span>(Point::from_str(<span class="string">&quot;FXSHRXY1&quot;</span>).is_err());
+        <span class="macro">assert!</span>(Point::from_str(<span class="string">"A"</span>).is_err());
+        <span class="macro">assert!</span>(Point::from_str(<span class="string">"1"</span>).is_err());
+        <span class="macro">assert!</span>(Point::from_str(<span class="string">"A0"</span>).is_err());
+        <span class="macro">assert!</span>(Point::from_str(<span class="string">"A2147483649"</span>).is_err());
+        <span class="macro">assert!</span>(Point::from_str(<span class="string">"FXSHRXY1"</span>).is_err());
 
         <span class="comment">// This should not overflow.
-        </span><span class="macro">assert!</span>(Point::from_str(<span class="string">&quot;FXSHRXXA1&quot;</span>).is_err());
+        </span><span class="macro">assert!</span>(Point::from_str(<span class="string">"FXSHRXXA1"</span>).is_err());
     }
 
     <span class="attr">#[test]
@@ -1200,5 +1202,4 @@
         <span class="macro">assert_eq!</span>(mem::size_of::&lt;Board&gt;(), mem::size_of::&lt;<span class="prelude-ty">Option</span>&lt;Board&gt;&gt;());
     }
 }
-</code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="connect6" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.0-nightly (1d12c3cea 2022-12-20)" data-search-js="search-444266647c4dba98.js" data-settings-js="settings-bebeae96e00e4617.js" data-settings-css="settings-58836c674e2f7bd2.css" ></div></body></html>
+</code></pre></div></section></main></body></html>
