@@ -11,11 +11,9 @@ use crate::{
     console,
     message::Event,
 };
-use async_trait::async_trait;
 use tokio::task;
 
 /// A trait for Connect6 players.
-#[async_trait]
 pub trait Player {
     /// Attaches the player to the game.
     async fn attach(self, event_rx: Receiver<Event>, cmd_tx: CmdSender);
@@ -24,7 +22,6 @@ pub trait Player {
 /// A player that inputs moves from the console.
 pub struct Console;
 
-#[async_trait]
 impl Player for Console {
     async fn attach(self, mut event_rx: Receiver<Event>, cmd_tx: CmdSender) {
         let stone = cmd_tx.stone();
@@ -39,7 +36,6 @@ impl Player for Console {
 /// A player that passes on every move.
 pub struct Void;
 
-#[async_trait]
 impl Player for Void {
     async fn attach(self, mut event_rx: Receiver<Event>, cmd_tx: CmdSender) {
         while let Some(event) = event_rx.recv().await {
@@ -53,7 +49,6 @@ impl Player for Void {
 /// A player that makes totally randomized moves.
 pub struct Chaos;
 
-#[async_trait]
 impl Player for Chaos {
     async fn attach(self, mut event_rx: Receiver<Event>, cmd_tx: CmdSender) {
         let mut queue: HashSet<Point>;
@@ -100,7 +95,6 @@ impl<P: Policy> Mcts<P> {
     }
 }
 
-#[async_trait]
 impl<P: Policy> Player for Mcts<P> {
     async fn attach(self, mut event_rx: Receiver<Event>, cmd_tx: CmdSender) {
         let timeout = self.timeout / 3;

@@ -1,3 +1,4 @@
+#![allow(async_fn_in_trait)]
 #![warn(rust_2018_idioms, missing_docs)]
 
 //! A library for hosting [Connect6] games asynchronously.

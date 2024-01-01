@@ -3,9 +3,9 @@ name = "connect6"
 version = "0.1.0"
 authors = ["Scallop Ye <yescallop@gmail.com>"]
 edition = "2021"
+rust-version = "1.75"
 
 [dependencies]
-async-trait = "0.1"
 displaydoc = "0.2"
 thiserror = "1"
 tokio = { version = "1", features = ["macros", "rt", "sync"] }
